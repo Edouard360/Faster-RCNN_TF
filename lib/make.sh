@@ -1,4 +1,4 @@
-TF_INC=$(python -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
+TF_INC=$(python2.7 -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
 
 CUDA_PATH=/usr/local/cuda/
 CXXFLAGS=''

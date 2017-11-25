@@ -10,6 +10,7 @@
 from fast_rcnn.config import cfg
 import gt_data_layer.roidb as gdl_roidb
 import roi_data_layer.roidb as rdl_roidb
+from gt_data_layer.layer import GtDataLayer
 from roi_data_layer.layer import RoIDataLayer
 from utils.timer import Timer
 import numpy as np

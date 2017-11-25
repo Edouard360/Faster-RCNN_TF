@@ -2,3 +2,7 @@
 *.so
 *.o
 faster_rcnn_models
+.idea/
+data/
+*.ckpt
+.gitignore
