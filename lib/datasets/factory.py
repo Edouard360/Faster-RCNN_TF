@@ -10,6 +10,7 @@
 __sets = {}
 
 import datasets.pascal_voc
+import datasets.my_dataset
 import datasets.imagenet3d
 import datasets.kitti
 import datasets.kitti_tracking
@@ -42,12 +43,19 @@ for top_k in np.arange(1000, 11000, 1000):
 """
 
 # Set up voc_<year>_<split> using selective search "fast" mode
-for year in ['2007']:
+for year in ['2007','2008']: # added 2008
     for split in ['train', 'val', 'trainval', 'test']:
         name = 'voc_{}_{}'.format(year, split)
         print name
         __sets[name] = (lambda split=split, year=year:
                 datasets.pascal_voc(split, year))
+
+for year in ['2008']:  # added 2008
+    for split in ['train', 'val', 'trainval', 'test']:
+        name = 'voc_{}_{}'.format(year, split)
+        print name
+        __sets[name] = (lambda split=split, year=year:
+                        datasets.my_dataset(split, year))
 
 # KITTI dataset
 for split in ['train', 'val', 'trainval', 'test']:

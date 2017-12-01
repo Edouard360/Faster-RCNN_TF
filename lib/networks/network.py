@@ -45,6 +45,7 @@ class Network(object):
         if data_path.endswith('.ckpt'):
             saver.restore(session, data_path)
         else:
+            self.session=session # TODO: REMOVE
             data_dict = np.load(data_path).item()
             for key in data_dict:
                 with tf.variable_scope(key, reuse=True):
@@ -102,7 +103,7 @@ class Network(object):
 
             init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
             init_biases = tf.constant_initializer(0.0)
-            kernel = self.make_var('weights', [k_h, k_w, c_i/group, c_o], init_weights, trainable)
+            kernel = self.make_var('weights', [k_h, k_w, c_i/group, c_o], init_weights, trainable) # c_i/group=3 ?
             biases = self.make_var('biases', [c_o], init_biases, trainable)
 
             if group==1:
@@ -186,6 +187,8 @@ class Network(object):
             input[0] = input[0][0]
         with tf.variable_scope(name) as scope:
 
+            # I want to remove the tf
+            #self.session.run([input[0],input[1],classes])
             rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights = tf.py_func(proposal_target_layer_py,[input[0],input[1],classes],[tf.float32,tf.float32,tf.float32,tf.float32,tf.float32])
 
             rois = tf.reshape(rois,[-1,5] , name = 'rois') 

@@ -9,17 +9,18 @@ import numpy as np
 import os, sys, cv2
 import argparse
 from networks.factory import get_network
-
+#tf.nn.max_pool()
+# This is totally database agnostic
 
 CLASSES = ('__background__',
-           'aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
+          'sigma', 'alpha')
 
-
-#CLASSES = ('__background__','person','bike','motorbike','car','bus')
+# CLASSES = ('__background__',
+#            'aeroplane', 'bicycle', 'bird', 'boat',
+#            'bottle', 'bus', 'car', 'cat', 'chair',
+#            'cow', 'diningtable', 'dog', 'horse',
+#            'motorbike', 'person', 'pottedplant',
+#            'sheep', 'sofa', 'train', 'tvmonitor')
 
 def vis_detections(im, class_name, dets,ax, thresh=0.5):
     """Draw detected bounding boxes."""
@@ -57,22 +58,22 @@ def demo(sess, net, image_name):
     # Load the demo image
     im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
     #im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
-    im = cv2.imread(im_file)
+    im = cv2.imread(im_file,0)[:,:,np.newaxis]
 
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
-    scores, boxes = im_detect(sess, net, im)
+    scores, boxes, rpn_cls_score = im_detect(sess, net, im)
     timer.toc()
     print ('Detection took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
 
     # Visualize detections for each class
-    im = im[:, :, (2, 1, 0)]
+    #im = im[:, :, (2, 1, 0)] # for 3 channels only
     fig, ax = plt.subplots(figsize=(12, 12))
-    ax.imshow(im, aspect='equal')
+    ax.imshow(im[:,:,0], aspect='equal',cmap='gray')
 
-    CONF_THRESH = 0.8
+    CONF_THRESH = 0.5
     NMS_THRESH = 0.3
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1 # because we skipped background
@@ -111,7 +112,7 @@ if __name__ == '__main__':
     # init session
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # load network
-    net = get_network(args.demo_net)
+    net = get_network(args.demo_net, state='TEST')
     # load model
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
     saver.restore(sess, args.model)
@@ -121,12 +122,13 @@ if __name__ == '__main__':
     print '\n\nLoaded network {:s}'.format(args.model)
 
     # Warmup on a dummy image
-    im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
-    for i in xrange(2):
-        _, _= im_detect(sess, net, im)
+    # im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
+    # for i in xrange(2):
+    #     _, _= im_detect(sess, net, im)
 
-    im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
-                '001763.jpg', '004545.jpg']
+    im_names = ['04.jpg'] # Let's see if we can overfit
+    # im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
+    #               '001763.jpg', '004545.jpg']
 
 
     for im_name in im_names:

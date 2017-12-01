@@ -41,8 +41,9 @@ def _get_image_blob(im):
         # Prevent the biggest axis from being more than MAX_SIZE
         if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
             im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-        im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
-                        interpolation=cv2.INTER_LINEAR)
+        # im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
+        #                 interpolation=cv2.INTER_LINEAR)
+        im = im/255
         im_scale_factors.append(im_scale)
         processed_ims.append(im)
 
@@ -173,14 +174,17 @@ def im_detect(sess, net, im, boxes=None):
         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         run_metadata = tf.RunMetadata()
 
-    cls_score, cls_prob, bbox_pred, rois = sess.run([net.get_output('cls_score'), net.get_output('cls_prob'), net.get_output('bbox_pred'),net.get_output('rois')],
+    rpn_cls_prob,rpn_cls_score,rpn_bbox_pred,cls_score, cls_prob, bbox_pred, rois = sess.run([net.rpn_cls_prob,net.rpn_cls_score,net.rpn_bbox_pred,net.logits, net.cls_prob, net.bbox_pred,net.rpn_rois],
                                                     feed_dict=feed_dict,
                                                     options=run_options,
                                                     run_metadata=run_metadata)
 
+    #[(rpn_cls_score[0, :, :, 2 * k] >= rpn_cls_score[0, :, :, 2 * k + 1]).mean() for k in range(9)]
+
     if cfg.TEST.HAS_RPN:
         assert len(im_scales) == 1, "Only single-image batch implemented"
-        boxes = rois[:, 1:5] / im_scales[0]
+        boxes = rois[:, 1:5] #im_scales[0]
+        # Select parmi les bonnes rpn_bbox_pred
 
 
     if cfg.TEST.SVM:
@@ -211,7 +215,7 @@ def im_detect(sess, net, im, boxes=None):
         trace_file.write(trace.generate_chrome_trace_format(show_memory=False))
         trace_file.close()
 
-    return scores, pred_boxes
+    return scores, pred_boxes,rpn_cls_prob
 
 
 def vis_detections(im, class_name, dets, thresh=0.8):

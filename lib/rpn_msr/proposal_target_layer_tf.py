@@ -34,8 +34,8 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
     )
 
     # Sanity check: single batch only
-    assert np.all(all_rois[:, 0] == 0), \
-            'Only single item batches are supported'
+    # assert np.all(all_rois[:, 0]) == 0), \
+    #         'Only single item batches are supported'
 
     num_images = 1
     rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
@@ -47,15 +47,19 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
         all_rois, gt_boxes, fg_rois_per_image,
         rois_per_image, _num_classes)
 
+    _count=0
+    _fg_num=0
+    _bg_num=0
     if DEBUG:
+        print 'all rois shape :',all_rois.shape
+        print 'how much fg I ask',fg_rois_per_image
+        print 'how much fg I get (see below)'
         print 'num fg: {}'.format((labels > 0).sum())
         print 'num bg: {}'.format((labels == 0).sum())
         _count += 1
         _fg_num += (labels > 0).sum()
         _bg_num += (labels == 0).sum()
-        print 'num fg avg: {}'.format(_fg_num / _count)
-        print 'num bg avg: {}'.format(_bg_num / _count)
-        print 'ratio: {:.3f}'.format(float(_fg_num) / float(_bg_num))
+        print 'ratio: {:.3f}'.format(float(_fg_num) / (float(_fg_num)+float(_bg_num)))
 
     rois = rois.reshape(-1,5)
     labels = labels.reshape(-1,1)
@@ -106,20 +110,43 @@ def _compute_targets(ex_rois, gt_rois, labels):
     return np.hstack(
             (labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
 
+###
 def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
     """
+
+    # import ipdb; import os;import cv2;
+    # from demo import vis_detections
+    # import matplotlib.pyplot as plt
+    # im_file = os.path.join(cfg.DATA_DIR, 'demo', "02.jpg")
+    # im = cv2.imread(im_file)
+    # dets = np.array([gt_boxes[:, :4], 1])
+    # cls="DICK"
+    # fig,ax = plt.subplots(figsize=(12, 12))
+    # ax.imshow(im, aspect='equal')
+    #
+    # ipdb.set_trace()
+    # vis_detections(im, cls, dets, ax, thresh=0)
+
+
+
+
     # overlaps: (rois x gt_boxes)
     overlaps = bbox_overlaps(
         np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
         np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))
+    if DEBUG==True:
+        pass
+        # print gt_boxes[:,4]
+        # print 'All labeled > 0' if (gt_boxes[:,4]>0).all() else 'Not all labeled > 0' # Indeed, 1 1 2 ect...
     gt_assignment = overlaps.argmax(axis=1)
     max_overlaps = overlaps.max(axis=1)
     labels = gt_boxes[gt_assignment, 4]
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
     fg_inds = np.where(max_overlaps >= cfg.TRAIN.FG_THRESH)[0]
+    #print("PICKLERICK :",len(all_rois))
     # Guard against the case when an image has fewer than fg_rois_per_image
     # foreground RoIs
     fg_rois_per_this_image = int(min(fg_rois_per_image, fg_inds.size))
@@ -143,7 +170,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     # Select sampled values from various arrays:
     labels = labels[keep_inds]
     # Clamp labels for the background RoIs to 0
-    labels[fg_rois_per_this_image:] = 0
+    labels[fg_rois_per_this_image:] = 0 # Initially, none of them is 0 !
     rois = all_rois[keep_inds]
 
     bbox_target_data = _compute_targets(

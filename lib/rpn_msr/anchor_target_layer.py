@@ -6,7 +6,7 @@
 # --------------------------------------------------------
 
 import os
-import caffe
+#import caffe
 import yaml
 from fast_rcnn.config import cfg
 import numpy as np
@@ -17,7 +17,7 @@ from fast_rcnn.bbox_transform import bbox_transform
 
 DEBUG = False 
 
-class AnchorTargetLayer(caffe.Layer):
+class AnchorTargetLayer:#(caffe.Layer):
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.

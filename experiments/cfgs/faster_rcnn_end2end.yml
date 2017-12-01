@@ -1,13 +1,23 @@
 EXP_DIR: faster_rcnn_end2end
 TRAIN:
   HAS_RPN: True
-  IMS_PER_BATCH: 1
-  BBOX_NORMALIZE_TARGETS_PRECOMPUTED: True
-  RPN_POSITIVE_OVERLAP: 0.7
-  RPN_BATCHSIZE: 256
+  USE_FLIPPED: False
   PROPOSAL_METHOD: gt
-  BG_THRESH_LO: 0.0
-  DISPLAY: 1
-  SNAPSHOT_ITERS: 50
+  DISPLAY: 10
+  SNAPSHOT_ITERS: 100
+
+  RPN_POSITIVE_OVERLAP: 0.7
+  RPN_BATCHSIZE: 128 # Not 256
+  RPN_FG_FRACTION: 0.5 # 0.5 ? tuning careful...
+
+  IMS_PER_BATCH: 1 # This can only be 1 ??
+  FG_FRACTION: 0.75 # Not 0.25
+  FG_THRESH: 0.5
+  RPN_NMS_THRESH: 0.9 # Put that as high as possible - we only have one image per sample...
+  BATCH_SIZE: 64 # Then batch size should only be 1 also... (There is at most one good proposal)
+  BBOX_NORMALIZE_TARGETS_PRECOMPUTED: True
+
+  BG_THRESH_HI: 0.5
+  BG_THRESH_LO: 0.1
 TEST:
   HAS_RPN: True

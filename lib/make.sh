@@ -1,4 +1,5 @@
-TF_INC=$(python2.7 -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
+TF_INC=$(python -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
+TF_LIB=$(python -c 'import tensorflow as tf; print(tf.sysconfig.get_lib())')
 
 CUDA_PATH=/usr/local/cuda/
 CXXFLAGS=''
@@ -15,11 +16,11 @@ if [ -d "$CUDA_PATH" ]; then
 		-arch=sm_37
 
 	g++ -std=c++11 -shared -o roi_pooling.so roi_pooling_op.cc \
-		roi_pooling_op.cu.o -I $TF_INC  -D GOOGLE_CUDA=1 -fPIC $CXXFLAGS \
-		-lcudart -L $CUDA_PATH/lib64
+	    roi_pooling_op.cu.o -I $TF_INC  -D GOOGLE_CUDA=1 -fPIC $CXXFLAGS \
+	    -lcudart -L $CUDA_PATH/lib64
 else
 	g++ -std=c++11 -shared -o roi_pooling.so roi_pooling_op.cc \
-		-I $TF_INC -fPIC $CXXFLAGS
+		-I $TF_INC -fPIC $CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -L$TF_LIB -ltensorflow_framework
 fi
 
 cd ..

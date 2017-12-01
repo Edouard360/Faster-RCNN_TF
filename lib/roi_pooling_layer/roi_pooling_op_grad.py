@@ -3,7 +3,7 @@ from tensorflow.python.framework import ops
 import roi_pooling_op
 import pdb
 
-
+# NO LONGER USED !!!! - SetShapeFn
 @ops.RegisterShape("RoiPool")
 def _roi_pool_shape(op):
   """Shape function for the RoiPool op.

@@ -15,10 +15,12 @@ from utils.cython_bbox import bbox_overlaps
 from fast_rcnn.bbox_transform import bbox_transform
 import pdb
 
+import matplotlib.pyplot as plt
 DEBUG = False
+from helpme import vis_detections
 
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [16,], anchor_scales = [4 ,8, 16, 32]):
-    """
+    """ MORTY
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     """
@@ -59,7 +61,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         'Only single item batches are supported'
 
     # map of shape (..., H, W)
-    height, width = rpn_cls_score.shape[1:3]
+    height, width = rpn_cls_score.shape[1:3] # This is after convolution width heigth (receptive field)
 
     if DEBUG:
         print 'AnchorTargetLayer: height', height, 'width', width
@@ -138,8 +140,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)
     fg_inds = np.where(labels == 1)[0]
     if len(fg_inds) > num_fg:
-        disable_inds = npr.choice(
-            fg_inds, size=(len(fg_inds) - num_fg), replace=False)
+        disable_inds = npr.choice(fg_inds, size=(len(fg_inds) - num_fg), replace=False)
         labels[disable_inds] = -1
 
     # subsample negative labels if we have too many
@@ -186,6 +187,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         print stds
 
     # map up to original set of anchors
+    # VERY IMPORTANT TO NOTICE ! WE OBVIOUSLY ONLY CARE ABOUT inds_inside and not inds_outside
     labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
     bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
     bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, fill=0)
@@ -195,11 +197,12 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         print 'rpn: max max_overlap', np.max(max_overlaps)
         print 'rpn: num_positive', np.sum(labels == 1)
         print 'rpn: num_negative', np.sum(labels == 0)
+        print 'total rpn', np.sum(labels >= 0)
         _fg_sum += np.sum(labels == 1)
         _bg_sum += np.sum(labels == 0)
-        _count += 1
-        print 'rpn: num_positive avg', _fg_sum / _count
-        print 'rpn: num_negative avg', _bg_sum / _count
+        # _count += 1
+        # print 'rpn: num_positive avg', _fg_sum / _count
+        # print 'rpn: num_negative avg', _bg_sum / _count
 
     # labels
     #pdb.set_trace()
@@ -227,7 +230,43 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     #assert bbox_outside_weights.shape[3] == width
 
     rpn_bbox_outside_weights = bbox_outside_weights
+    #import ipdb;
 
+    # fig, ax = plt.subplots(figsize=(12, 12))
+    # ax.imshow(data[0], aspect='equal')
+    #vis_detections(None,"1",np.concatenate((anchors[:3,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
+
+    # ANCHORS 1 - SIGMA
+    #vis_detections(None, "2", np.concatenate((anchors[40000:40009, :], np.ones((9, 1),dtype=np.int32)), axis=1), ax)
+    # vis_detections(None,"3",np.concatenate((anchors[60000:60003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
+    #vis_detections(None, "2", np.concatenate((anchors[16000:16009, :], np.ones((10, 1),dtype=np.int32)), axis=1), ax)
+
+    # ANCHORS 2 - SIGMA
+    # vis_detections(None,"3",np.concatenate((anchors[3000:3003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
+    # vis_detections(None,"3",np.concatenate((anchors[8000:8003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
+
+    # ANCHORS 3 - SIGMA
+    # vis_detections(None,"3",np.concatenate((anchors[3000:3003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
+    # vis_detections(None,"3",np.concatenate((anchors[8000:8003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
+
+    # vis_detections(None, "3", np.concatenate((anchors[3000:3015:5, :], np.ones((3, 1), dtype=np.int32)), axis=1), ax)
+    # fig.savefig("anchors3")
+    #ipdb.set_trace()
+
+    #SUMMER - The ground-truth rpn label come from here
+    # import ipdb;
+    #
+    # if DEBUG:
+    #     # All anchors - even those that cross outside
+    #     # anchors - all anchors ! No bbox_overlap yet computed
+    #     # Initially, the indices out are discarded, and for the indices in:
+    #     # It is put to -1 if too many train in the foreground or too many test in the background
+    #     print 'Number of useless or discarded :',(labels == -1).sum()
+    #     fig, ax = plt.subplots(figsize=(12, 12))
+    #     ax.imshow(data[0], aspect='equal')
+    #     vis_detections(None, "1", np.concatenate((anchors[fg_inds, :], np.ones((len(fg_inds), 1), dtype=np.int32)), axis=1), ax)
+    #     fig.savefig("anchors_label_1")
+    # ipdb.set_trace()
     return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights
 
 

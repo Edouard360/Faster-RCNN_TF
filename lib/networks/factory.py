@@ -11,6 +11,8 @@ __sets = {}
 
 import networks.VGGnet_train
 import networks.VGGnet_test
+import networks.VGGnet_trainoverfit
+import networks.VGGnet_testoverfit
 import pdb
 import tensorflow as tf
 
@@ -19,7 +21,7 @@ import tensorflow as tf
 #__sets['VGGnet_test'] = networks.VGGnet_test()
 
 
-def get_network(name):
+def get_network(name, **kargs):
     """Get a network by name."""
     #if not __sets.has_key(name):
     #    raise KeyError('Unknown dataset: {}'.format(name))
@@ -28,6 +30,10 @@ def get_network(name):
        return networks.VGGnet_test()
     elif name.split('_')[1] == 'train':
        return networks.VGGnet_train()
+    elif name.split('_')[1] == 'trainoverfit':
+       return networks.VGGnet_trainoverfit(**kargs)
+    elif name.split('_')[1] == 'testoverfit':
+       return networks.VGGnet_testoverfit()
     else:
        raise KeyError('Unknown dataset: {}'.format(name))
     

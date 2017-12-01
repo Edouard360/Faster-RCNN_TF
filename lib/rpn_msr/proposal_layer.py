@@ -5,7 +5,7 @@
 # Written by Ross Girshick and Sean Bell
 # --------------------------------------------------------
 
-import caffe
+#import caffe
 import numpy as np
 import yaml
 from fast_rcnn.config import cfg
@@ -15,7 +15,7 @@ from fast_rcnn.nms_wrapper import nms
 
 DEBUG = False
 
-class ProposalLayer(caffe.Layer):
+class ProposalLayer:#(caffe.Layer):
     """
     Outputs object detection proposals by applying estimated bounding-box
     transformations to a set of regular boxes (called "anchors").

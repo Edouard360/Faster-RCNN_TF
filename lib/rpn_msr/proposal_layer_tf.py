@@ -13,13 +13,14 @@ from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
 import pdb
 
-
+#NOT THE GOOD SHAPE
 DEBUG = False
 """
 Outputs object detection proposals by applying estimated bounding-box
 transformations to a set of regular boxes (called "anchors").
 """
 def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stride = [16,],anchor_scales = [8, 16, 32]):
+    #
     # Algorithm:
     #
     # for each (H, W) location i
@@ -50,6 +51,7 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     nms_thresh    = cfg[cfg_key].RPN_NMS_THRESH
     min_size      = cfg[cfg_key].RPN_MIN_SIZE
 
+
     # the first set of _num_anchors channels are bg probs
     # the second set are the fg probs, which we want
     scores = rpn_cls_prob_reshape[:, _num_anchors:, :, :]
@@ -57,11 +59,12 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     #im_info = bottom[2].data[0, :]
 
     if DEBUG:
+        print "nms thresh", nms_thresh
         print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
         print 'scale: {}'.format(im_info[2])
 
     # 1. Generate proposals from bbox deltas and shifted anchors
-    height, width = scores.shape[-2:]
+    height, width = scores.shape[-2:] # TODO: here is the link btw shift and height/width
 
     if DEBUG:
         print 'score map size: {}'.format(scores.shape)
@@ -109,7 +112,7 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
 
     # 3. remove predicted boxes with either height or width < threshold
     # (NOTE: convert min_size to input image scale stored in im_info[2])
-    keep = _filter_boxes(proposals, min_size * im_info[2])
+    keep = _filter_boxes(proposals, min_size)# * im_info[2]) remove the info about scale ?
     proposals = proposals[keep, :]
     scores = scores[keep]
 
@@ -133,7 +136,7 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     # Our RPN implementation only supports a single input image, so all
     # batch inds are 0
     batch_inds = np.zeros((proposals.shape[0], 1), dtype=np.float32)
-    blob = np.hstack((batch_inds, proposals.astype(np.float32, copy=False)))
+    blob = np.hstack((scores, proposals.astype(np.float32, copy=False)))# TODO batch_inds replace scores !
     return blob
     #top[0].reshape(*(blob.shape))
     #top[0].data[...] = blob

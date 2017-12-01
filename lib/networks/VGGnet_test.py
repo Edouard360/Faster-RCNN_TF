@@ -3,7 +3,7 @@ from networks.network import Network
 
 n_classes = 21
 _feat_stride = [16,]
-anchor_scales = [8, 16, 32] 
+anchor_scales = [32]#[8, 16, 32]
 
 class VGGnet_test(Network):
     def __init__(self, trainable=True):
