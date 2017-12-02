@@ -142,7 +142,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
         # print 'All labeled > 0' if (gt_boxes[:,4]>0).all() else 'Not all labeled > 0' # Indeed, 1 1 2 ect...
     gt_assignment = overlaps.argmax(axis=1)
     max_overlaps = overlaps.max(axis=1)
-    labels = gt_boxes[gt_assignment, 4]
+    labels = np.array(gt_boxes[gt_assignment, 4],dtype=np.int32)
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
     fg_inds = np.where(max_overlaps >= cfg.TRAIN.FG_THRESH)[0]

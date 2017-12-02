@@ -20,7 +20,7 @@ DEBUG = False
 from helpme import vis_detections
 
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [16,], anchor_scales = [4 ,8, 16, 32]):
-    """ MORTY
+    """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     """
@@ -107,7 +107,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
         print 'anchors.shape', anchors.shape
 
     # label: 1 is positive, 0 is negative, -1 is dont care
-    labels = np.empty((len(inds_inside), ), dtype=np.float32)
+    labels = np.empty((len(inds_inside), ), dtype=np.int32)
     labels.fill(-1)
 
     # overlaps between the anchors and the gt boxes
@@ -193,81 +193,23 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, fill=0)
     bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, fill=0)
 
-    if DEBUG:
-        print 'rpn: max max_overlap', np.max(max_overlaps)
-        print 'rpn: num_positive', np.sum(labels == 1)
-        print 'rpn: num_negative', np.sum(labels == 0)
-        print 'total rpn', np.sum(labels >= 0)
-        _fg_sum += np.sum(labels == 1)
-        _bg_sum += np.sum(labels == 0)
-        # _count += 1
-        # print 'rpn: num_positive avg', _fg_sum / _count
-        # print 'rpn: num_negative avg', _bg_sum / _count
 
-    # labels
-    #pdb.set_trace()
     labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)
-    labels = labels.reshape((1, 1, A * height, width))
+    labels = labels.reshape(-1)
     rpn_labels = labels
 
     # bbox_targets
-    bbox_targets = bbox_targets \
-        .reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
 
-    rpn_bbox_targets = bbox_targets
-    # bbox_inside_weights
-    bbox_inside_weights = bbox_inside_weights \
-        .reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
-    #assert bbox_inside_weights.shape[2] == height
-    #assert bbox_inside_weights.shape[3] == width
+    rpn_bbox_targets = bbox_targets.reshape((1, height, width, A * 4))
+    rpn_bbox_inside_weights = bbox_inside_weights.reshape((1, height, width, A * 4))
+    rpn_bbox_outside_weights = bbox_outside_weights.reshape((1, height, width, A * 4))
 
-    rpn_bbox_inside_weights = bbox_inside_weights
+    bg=np.sum(labels == 0)
+    fg=np.sum(labels == 1)
+    total_rpn = fg + bg
 
-    # bbox_outside_weights
-    bbox_outside_weights = bbox_outside_weights \
-        .reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
-    #assert bbox_outside_weights.shape[2] == height
-    #assert bbox_outside_weights.shape[3] == width
-
-    rpn_bbox_outside_weights = bbox_outside_weights
-    #import ipdb;
-
-    # fig, ax = plt.subplots(figsize=(12, 12))
-    # ax.imshow(data[0], aspect='equal')
-    #vis_detections(None,"1",np.concatenate((anchors[:3,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
-
-    # ANCHORS 1 - SIGMA
-    #vis_detections(None, "2", np.concatenate((anchors[40000:40009, :], np.ones((9, 1),dtype=np.int32)), axis=1), ax)
-    # vis_detections(None,"3",np.concatenate((anchors[60000:60003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
-    #vis_detections(None, "2", np.concatenate((anchors[16000:16009, :], np.ones((10, 1),dtype=np.int32)), axis=1), ax)
-
-    # ANCHORS 2 - SIGMA
-    # vis_detections(None,"3",np.concatenate((anchors[3000:3003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
-    # vis_detections(None,"3",np.concatenate((anchors[8000:8003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
-
-    # ANCHORS 3 - SIGMA
-    # vis_detections(None,"3",np.concatenate((anchors[3000:3003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
-    # vis_detections(None,"3",np.concatenate((anchors[8000:8003,:],np.ones((3,1),dtype=np.int32)),axis=1),ax)
-
-    # vis_detections(None, "3", np.concatenate((anchors[3000:3015:5, :], np.ones((3, 1), dtype=np.int32)), axis=1), ax)
-    # fig.savefig("anchors3")
-    #ipdb.set_trace()
-
-    #SUMMER - The ground-truth rpn label come from here
-    # import ipdb;
-    #
-    # if DEBUG:
-    #     # All anchors - even those that cross outside
-    #     # anchors - all anchors ! No bbox_overlap yet computed
-    #     # Initially, the indices out are discarded, and for the indices in:
-    #     # It is put to -1 if too many train in the foreground or too many test in the background
-    #     print 'Number of useless or discarded :',(labels == -1).sum()
-    #     fig, ax = plt.subplots(figsize=(12, 12))
-    #     ax.imshow(data[0], aspect='equal')
-    #     vis_detections(None, "1", np.concatenate((anchors[fg_inds, :], np.ones((len(fg_inds), 1), dtype=np.int32)), axis=1), ax)
-    #     fig.savefig("anchors_label_1")
-    # ipdb.set_trace()
-    return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights
+    debug_info=np.array([total_anchors,total_rpn,bg,fg],dtype=np.float32)
+    return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights,debug_info
 
 
 
@@ -275,11 +217,11 @@ def _unmap(data, count, inds, fill=0):
     """ Unmap a subset of item (data) back to the original set of items (of
     size count) """
     if len(data.shape) == 1:
-        ret = np.empty((count, ), dtype=np.float32)
+        ret = np.empty((count, ), dtype=data.dtype)
         ret.fill(fill)
         ret[inds] = data
     else:
-        ret = np.empty((count, ) + data.shape[1:], dtype=np.float32)
+        ret = np.empty((count, ) + data.shape[1:], dtype=data.dtype)
         ret.fill(fill)
         ret[inds, :] = data
     return ret

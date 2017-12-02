@@ -9,6 +9,8 @@
 
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
+
 
 def im_list_to_blob(ims):
     """Convert a list of images into a network input.
@@ -17,7 +19,7 @@ def im_list_to_blob(ims):
     """
     max_shape = np.array([im.shape for im in ims]).max(axis=0)
     num_images = len(ims)
-    blob = np.zeros((num_images, max_shape[0], max_shape[1], 3),
+    blob = np.zeros((num_images, max_shape[0], max_shape[1], 1), #TODO HERE 3 was for channel before
                     dtype=np.float32)
     for i in xrange(num_images):
         im = ims[i]
@@ -36,7 +38,7 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
     # Prevent the biggest axis from being more than MAX_SIZE
     if np.round(im_scale * im_size_max) > max_size:
         im_scale = float(max_size) / float(im_size_max)
-    im = cv2.resize(im, None, None, fx=im_scale, fy=im_scale,
-                    interpolation=cv2.INTER_LINEAR)
+    # im = cv2.resize(im, None, None, fx=im_scale, fy=im_scale,
+    #                 interpolation=cv2.INTER_LINEAR)
 
     return im, im_scale

@@ -13,6 +13,8 @@ import cv2
 from fast_rcnn.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
 
+
+# THIS IS WHERE THE MAGIC HAPPENS
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
     num_images = len(roidb)
@@ -26,6 +28,7 @@ def get_minibatch(roidb, num_classes):
     fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
 
     # Get the input image blob, formatted for caffe
+    # THIS IS FUCKING CRAZY
     im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
 
     blobs = {'data': im_blob}
@@ -36,7 +39,7 @@ def get_minibatch(roidb, num_classes):
         # gt boxes: (x1, y1, x2, y2, cls)
         gt_inds = np.where(roidb[0]['gt_classes'] != 0)[0]
         gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
-        gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
+        gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] #* im_scales[0]
         gt_boxes[:, 4] = roidb[0]['gt_classes'][gt_inds]
         blobs['gt_boxes'] = gt_boxes
         blobs['im_info'] = np.array(
@@ -134,12 +137,13 @@ def _get_image_blob(roidb, scale_inds):
     processed_ims = []
     im_scales = []
     for i in xrange(num_images):
-        im = cv2.imread(roidb[i]['image'])
-        if roidb[i]['flipped']:
-            im = im[:, ::-1, :]
+        im = cv2.imread(roidb[i]['image'],0)[:,:,np.newaxis] # 0 is for grayscale
+        # if roidb[i]['flipped']:
+        #     im = im[:, ::-1, :] # FLIPPED WTF ??
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]
-        im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
-                                        cfg.TRAIN.MAX_SIZE)
+
+        im2, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,cfg.TRAIN.MAX_SIZE)
+        im = im / 255
         im_scales.append(im_scale)
         processed_ims.append(im)
 

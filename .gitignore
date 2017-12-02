@@ -6,3 +6,7 @@ faster_rcnn_models
 data/
 *.ckpt
 .gitignore
+*.png
+*ckpt*
+tmp/
+output/

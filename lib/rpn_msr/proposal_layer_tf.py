@@ -13,12 +13,9 @@ from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
 import pdb
 
-#NOT THE GOOD SHAPE
+
 DEBUG = False
-"""
-Outputs object detection proposals by applying estimated bounding-box
-transformations to a set of regular boxes (called "anchors").
-"""
+
 def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stride = [16,],anchor_scales = [8, 16, 32]):
     #
     # Algorithm:
@@ -137,7 +134,7 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     # batch inds are 0
     batch_inds = np.zeros((proposals.shape[0], 1), dtype=np.float32)
     blob = np.hstack((scores, proposals.astype(np.float32, copy=False)))# TODO batch_inds replace scores !
-    return blob
+    return blob #TODO : if I want to debug that - two options: either I find a way to add summary or extract info about blob or add info as output
     #top[0].reshape(*(blob.shape))
     #top[0].data[...] = blob
 
