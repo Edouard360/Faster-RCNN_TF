@@ -10,3 +10,6 @@ data/
 *ckpt*
 tmp/
 output/
+*.jpg
+*.xml
+.ipynb_checkpoints/

@@ -7,6 +7,5 @@
 
 from .VGGnet_train import VGGnet_train
 from .VGGnet_test import VGGnet_test
-from .VGGnet_trainoverfit import VGGnet_trainoverfit
-from .VGGnet_testoverfit import VGGnet_testoverfit
+from .customNet import CustomNet
 from . import factory

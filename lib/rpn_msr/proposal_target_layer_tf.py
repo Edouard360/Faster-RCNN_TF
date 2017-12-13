@@ -110,28 +110,11 @@ def _compute_targets(ex_rois, gt_rois, labels):
     return np.hstack(
             (labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
 
-###
+
 def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
     """
-
-    # import ipdb; import os;import cv2;
-    # from demo import vis_detections
-    # import matplotlib.pyplot as plt
-    # im_file = os.path.join(cfg.DATA_DIR, 'demo', "02.jpg")
-    # im = cv2.imread(im_file)
-    # dets = np.array([gt_boxes[:, :4], 1])
-    # cls="DICK"
-    # fig,ax = plt.subplots(figsize=(12, 12))
-    # ax.imshow(im, aspect='equal')
-    #
-    # ipdb.set_trace()
-    # vis_detections(im, cls, dets, ax, thresh=0)
-
-
-
-
     # overlaps: (rois x gt_boxes)
     overlaps = bbox_overlaps(
         np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),

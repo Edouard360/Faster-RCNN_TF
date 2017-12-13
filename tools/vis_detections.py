@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def vis_detections(im, class_name, dets,ax, thresh=0.5, pb=False):
+def vis_detections(im, class_name, dets,ax, thresh=0.5, pb=True):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:

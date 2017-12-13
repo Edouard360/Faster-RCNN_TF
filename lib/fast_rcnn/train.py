@@ -82,83 +82,12 @@ class SolverWrapper(object):
                 sess.run(net.bbox_weights_assign, feed_dict={net.bbox_weights: orig_0})
                 sess.run(net.bbox_bias_assign, feed_dict={net.bbox_biases: orig_1})
 
-    def _modified_smooth_l1(self, sigma, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights):
-        """
-            ResultLoss = outside_weights * SmoothL1(inside_weights * (bbox_pred - bbox_targets))
-            SmoothL1(x) = 0.5 * (sigma * x)^2,    if |x| < 1 / sigma^2
-                          |x| - 0.5 / sigma^2,    otherwise
-        """
-        sigma2 = sigma * sigma
-
-        inside_mul = tf.multiply(bbox_inside_weights, tf.subtract(bbox_pred, bbox_targets))
-
-        smooth_l1_sign = tf.cast(tf.less(tf.abs(inside_mul), 1.0 / sigma2), tf.float32)
-        smooth_l1_option1 = tf.multiply(tf.multiply(inside_mul, inside_mul), 0.5 * sigma2)
-        smooth_l1_option2 = tf.subtract(tf.abs(inside_mul), 0.5 / sigma2)
-        smooth_l1_result = tf.add(tf.multiply(smooth_l1_option1, smooth_l1_sign),
-                                  tf.multiply(smooth_l1_option2, tf.abs(tf.subtract(smooth_l1_sign, 1.0))))
-
-        outside_mul = tf.multiply(bbox_outside_weights, smooth_l1_result)
-
-        return outside_mul
-
-
     def train_model(self, sess, max_iters):
         """Network training loop."""
         data_layer = get_data_layer(self.roidb, self.imdb.num_classes)
 
-        # RPN
-        # classification loss
-        with tf.name_scope('rpn'):
-            with tf.name_scope('rpn_cross_entropy'):
-                # self.net.get_output('rpn_cls_score_reshape')
-                rpn_cls_score = tf.reshape(self.net.rpn_cls_score,[-1,2])
-                rpn_label = self.net.rpn_labels
-                # tf.logical_and(tf.not_equal(rpn_label,-1),tf.not_equal(rpn_label,0))
-                rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score,tf.where(tf.not_equal(rpn_label,-1))),[-1,2])
-                rpn_label = tf.reshape(tf.gather(rpn_label,tf.where(tf.not_equal(rpn_label,-1))),[-1])
-                tf.summary.histogram('rpn_cls_score',rpn_cls_score)
-                rpn_fg_acc=tf.reduce_mean(tf.cast(tf.equal(tf.greater_equal(rpn_cls_score[:,0],0.5), tf.equal(rpn_label,0)),tf.float32))
-                tf.summary.scalar('rpn_fg_acc', rpn_fg_acc)
-                #class_weights = tf.Variable(trainable=False,initial_value=[[1,1]],dtype=tf.int32)
-                #rpn_label_weighted = tf.reduce_sum(tf.multiply(rpn_label, class_weights),1)
-                #sparse_
-                rpn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
-                tf.summary.scalar('cross_entropy', rpn_cross_entropy)
-            with tf.name_scope('rpn_cls_score'):
-                rpn_smooth_l1 = self._modified_smooth_l1(3.0, self.net.rpn_bbox_pred, self.net.rpn_bbox_targets, self.net.rpn_bbox_inside_weights, self.net.rpn_bbox_outside_weights)
-                rpn_loss_box = tf.reduce_mean(tf.reduce_sum(rpn_smooth_l1, reduction_indices=[1, 2, 3]))
-            rpn_loss = rpn_cross_entropy + rpn_loss_box
-            tf.summary.scalar('rpn_loss',rpn_loss)
+        self.net.compute_loss_and_summaries()
 
-
-        # R-CNN
-        with tf.name_scope('rcnn'):
-            with tf.name_scope('cls'):
-                labels = tf.reshape(self.net.labels,[-1])
-                cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.net.logits, labels=labels))
-
-                bg_acc = tf.reduce_mean(
-                    tf.cast(tf.equal(tf.greater_equal(self.net.cls_prob[:, 0], 0.5), tf.equal(labels, 0)), tf.float32))
-                cl1_acc = tf.reduce_mean(
-                    tf.cast(tf.equal(tf.greater_equal(self.net.cls_prob[:,1], 0.5), tf.equal(labels, 1)), tf.float32))
-                tf.summary.scalar('bg_acc',bg_acc)
-                tf.summary.scalar('cl1_acc', cl1_acc)
-            with tf.name_scope('bbox'):
-                smooth_l1 = self._modified_smooth_l1(1.0, self.net.bbox_pred, self.net.bbox_targets, self.net.bbox_inside_weights, self.net.bbox_outside_weights)
-                loss_box = tf.reduce_mean(tf.reduce_sum(smooth_l1, reduction_indices=[1]))
-                tf.summary.scalar('loss_box', loss_box)
-            rcnn_loss = cross_entropy + loss_box
-            tf.summary.scalar('rcnn_loss', rcnn_loss)
-
-
-        with tf.name_scope('total_loss'):
-            loss = rpn_loss+rcnn_loss
-            tf.summary.scalar('loss', loss)
-
-        train_op = tf.train.AdamOptimizer(5e-4).minimize(loss)
-
-        merge = tf.summary.merge_all()
         name='example_name_performance' # should include hyperparameters
         train_writer = tf.summary.FileWriter('../tmp/'+name,sess.graph)
 
@@ -181,8 +110,9 @@ class SolverWrapper(object):
 
             timer.tic()
 
+
             # loss_cls_value, loss_box_value --- cross_entropy, loss_box,
-            debug_info, summary, rpn_fg_acc_value, rpn_loss_cls_value, rpn_loss_box_value, _ = sess.run([self.net.debug_info,merge,rpn_fg_acc,rpn_cross_entropy, rpn_loss_box, train_op], #cross_entropy, loss_box,
+            debug_info, summary, _ = sess.run([self.net.debug_info,self.net.merge, self.net.train_op], #cross_entropy, loss_box,
                                                                                                 feed_dict=feed_dict)
 
             train_writer.add_summary(summary, iter) #TODO : uncomment when clean
@@ -205,9 +135,9 @@ class SolverWrapper(object):
             if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
                 # print("Mean classification :",
                 #       (rpn_cls_score_value[:, 0] <= rpn_cls_score_value[:, 1]).mean())  # Proportion of the foreground
-                print "RPN value classif.",rpn_fg_acc_value
-                print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f'%\
-                        (iter+1, max_iters, rpn_loss_cls_value+rpn_loss_box_value,rpn_loss_cls_value,rpn_loss_box_value)
+                # print "RPN value classif.",rpn_fg_acc_value
+                # print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f'%\
+                #         (iter+1, max_iters, rpn_loss_cls_value+rpn_loss_box_value,rpn_loss_cls_value,rpn_loss_box_value)
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
                 # , loss_cls: %.4f, loss_box: %.4f, lr: %f'%\

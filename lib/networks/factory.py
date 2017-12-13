@@ -11,8 +11,7 @@ __sets = {}
 
 import networks.VGGnet_train
 import networks.VGGnet_test
-import networks.VGGnet_trainoverfit
-import networks.VGGnet_testoverfit
+import networks.customNet
 import pdb
 import tensorflow as tf
 
@@ -26,14 +25,12 @@ def get_network(name, **kargs):
     #if not __sets.has_key(name):
     #    raise KeyError('Unknown dataset: {}'.format(name))
     #return __sets[name]
+    if name == 'customNet':
+        return networks.CustomNet(**kargs)
     if name.split('_')[1] == 'test':
        return networks.VGGnet_test()
     elif name.split('_')[1] == 'train':
        return networks.VGGnet_train()
-    elif name.split('_')[1] == 'trainoverfit':
-       return networks.VGGnet_trainoverfit(**kargs)
-    elif name.split('_')[1] == 'testoverfit':
-       return networks.VGGnet_testoverfit()
     else:
        raise KeyError('Unknown dataset: {}'.format(name))
     
