@@ -12,7 +12,7 @@ from networks.factory import get_network
 from vis_detections import vis_detections
 
 CLASSES = ('__background__',
-          'sigma', 'alpha')
+          'sigma', 'Sigma')
 
 def demo(sess, net, image_name):
     """Detect object classes in an image using pre-computed object proposals."""
@@ -82,14 +82,8 @@ if __name__ == '__main__':
 
     print '\n\nLoaded network {:s}'.format(args.model)
 
-    # Warmup on a dummy image
-    # im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
-    # for i in xrange(2):
-    #     _, _= im_detect(sess, net, im)
 
-    im_names = ['02.jpg'] # Let's see if we can overfit
-    # im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
-    #               '001763.jpg', '004545.jpg']
+    im_names = ['000.jpg','001.jpg','002.jpg','010.jpg'] # Let's see if we can overfit
 
 
     for im_name in im_names:

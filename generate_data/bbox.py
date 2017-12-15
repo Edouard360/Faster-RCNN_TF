@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 def plot_bbox(ax,bbox):
     """Plot bounding-box on matplotlib ax"""
@@ -15,7 +16,7 @@ def xml_bboxs(bboxs, width, height):
     for bbox in bboxs:
         bounds = bbox.bounds
         bboxs_bounds+=[[bounds[0],height-bounds[1],bounds[0]+bounds[2],height-(bounds[1]+bounds[3])]]
-    return bboxs_bounds
+    return np.array(bboxs_bounds)
 
 def coords_bboxs(bboxs,width,height):
     # From matplotlib to [0,1] coords

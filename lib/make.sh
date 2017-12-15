@@ -8,7 +8,7 @@ if [[ "$OSTYPE" =~ ^darwin ]]; then
 	CXXFLAGS+='-undefined dynamic_lookup'
 fi
 
-cd roi_pooling_layer
+cd roi_pooling_layer_2
 
 if [ -d "$CUDA_PATH" ]; then
 	nvcc -std=c++11 -c -o roi_pooling_op.cu.o roi_pooling_op_gpu.cu.cc \
@@ -20,7 +20,10 @@ if [ -d "$CUDA_PATH" ]; then
 	    -lcudart -L $CUDA_PATH/lib64
 else
 	g++ -std=c++11 -shared -o roi_pooling.so roi_pooling_op.cc \
-		-I $TF_INC -fPIC $CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -L$TF_LIB -ltensorflow_framework
+		-I $TF_INC -fPIC $CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 #-L$TF_LIB -ltensorflow_framework
+
+		g++ -std=c++11 -shared -o roi_pooling_op_grad.so roi_pooling_op_grad.cc \
+		-I $TF_INC -fPIC $CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 #-L$TF_LIB -ltensorflow_framework
 fi
 
 cd ..

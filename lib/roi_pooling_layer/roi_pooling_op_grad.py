@@ -24,11 +24,11 @@ def _roi_pool_shape(op):
 def _roi_pool_grad(op, grad, _):
   """The gradients for `roi_pool`.
   Args:
-    op: The `roi_pool` `Operation` that we are differentiating, which we can use
-      to find the inputs and outputs of the original op.
-    grad: Gradient with respect to the output of the `roi_pool` op.
+	op: The `roi_pool` `Operation` that we are differentiating, which we can use
+	  to find the inputs and outputs of the original op.
+	grad: Gradient with respect to the output of the `roi_pool` op.
   Returns:
-    Gradients with respect to the input of `zero_out`.
+	Gradients with respect to the input of `zero_out`.
   """
   data = op.inputs[0]
   rois = op.inputs[1]

@@ -106,7 +106,7 @@ class SolverWrapper(object):
 
             feed_dict={self.net.data: blobs['data'], self.net.im_info: blobs['im_info'], self.net.keep_prob: 0.5, \
                            self.net.gt_boxes: blobs['gt_boxes']}
-
+            #print(blobs['data'].mean())
 
             timer.tic()
 

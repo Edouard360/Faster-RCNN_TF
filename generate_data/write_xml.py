@@ -37,11 +37,11 @@ def write_xml(symbols, bboxs, width, height, filename='figure1.xml'):
         xmin = etree.SubElement(bndbox, "xmin")
         xmin.text = str(int(bbox[0]))
         ymin = etree.SubElement(bndbox, "ymin")
-        ymin.text = str(int(bbox[1]))
+        ymin.text = str(int(bbox[3])) # TODO : check reason of inversion ymin ymax
         xmax = etree.SubElement(bndbox, "xmax")
         xmax.text = str(int(bbox[2]))
         ymax = etree.SubElement(bndbox, "ymax")
-        ymax.text = str(int(bbox[3]))
+        ymax.text = str(int(bbox[1]))
 
     et = etree.ElementTree(root)
     et.write(filename, pretty_print=True)

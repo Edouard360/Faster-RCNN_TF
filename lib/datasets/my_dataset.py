@@ -30,7 +30,7 @@ class my_dataset(imdb):
                             else devkit_path
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
         self._classes = ('__background__', # always index 0
-                         'sigma','alpha') #SIGMA ! CHAMPION DU MONDE
+                         'sigma', 'Sigma' )#'sigma','alpha') #SIGMA ! CHAMPION DU MONDE
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
@@ -118,7 +118,7 @@ class my_dataset(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
         cache_file = os.path.join(self.cache_path,
-                                  self.name + '_selective_search_roidb.pkl')
+                                  self.name + '_selective_search_roidb.pkl') # TODO: remove cache ?
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
@@ -126,7 +126,7 @@ class my_dataset(imdb):
             print '{} ss roidb loaded from {}'.format(self.name, cache_file)
             return roidb
 
-        if int(self._year) == 2007 or self._image_set != 'test' or int(self._year) == 2008: # TODO FUCKKKKKKKKKKKKK
+        if int(self._year) == 2007 or self._image_set != 'test' or int(self._year) == 2008: # TODO: be careful
             gt_roidb = self.gt_roidb()
             ss_roidb = self._load_selective_search_roidb(gt_roidb)
             roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
@@ -208,7 +208,7 @@ class my_dataset(imdb):
             y1 = float(bbox.find('ymin').text) - 1
             x2 = float(bbox.find('xmax').text) - 1
             y2 = float(bbox.find('ymax').text) - 1
-            cls = self._class_to_ind[obj.find('name').text.lower().strip()]
+            cls = self._class_to_ind[obj.find('name').text] #TODO : this prevented sigma Sigma difference - removed .lower().strip()
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0

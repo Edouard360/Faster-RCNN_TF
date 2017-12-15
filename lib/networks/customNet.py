@@ -5,14 +5,15 @@ from rpn_msr.proposal_target_layer_tf import proposal_target_layer
 from networks.network import Network
 import roi_pooling_layer.roi_pooling_op as roi_pool_op
 from utils.smooth_l1 import smooth_l1
-
+from utils.adapt_rois import adapt_rois
 import tensorflow.contrib.layers as layers
+from roi_pooling_layer_2.roi_pooling_layer import roi_pooling_op_2
 # layers.conv2d #
 #define
 
 n_classes =  3
-_feat_stride = [16,]
-anchor_scales = [40]#[8, 16, 32]
+_feat_stride = [8,] # _feat_stride  generer trop d'anchor est ultra long
+anchor_scales = [10]#[8, 16, 32] -> car 7 * 16 = 112 ~ 100 => en plus en divisant par 16 ca tombera rond
 
 class CustomNet(Network):
     def __init__(self, trainable=True,state='TRAIN'):
@@ -38,10 +39,11 @@ class CustomNet(Network):
             self.bbox_bias_assign = biases.assign(self.bbox_biases)
 
     def setup(self):
-        l1=layers.conv2d(inputs=self.data,num_outputs=32,kernel_size=[3,3],stride=[4,4])
-        l2=layers.conv2d(inputs=l1,num_outputs=64,kernel_size=[3,3],stride=[4,4])
+        l1=layers.conv2d(inputs=1-self.data,num_outputs=32,kernel_size=[3,3],stride=[2,2])
+        l1_bis=layers.conv2d(inputs=l1,num_outputs=64,kernel_size=[3,3],stride=[2,2])
+        l2 = layers.conv2d(inputs=l1_bis, num_outputs=64, kernel_size=[3, 3], stride=[2, 2])
 
-        l3=layers.conv2d(inputs=l2, num_outputs=128, kernel_size=[3, 3], stride=[1, 1])
+        l3=layers.conv2d(inputs=l2, num_outputs=128, kernel_size=[3, 3], stride=[1, 1]) # layer 3 saves our ass 3 pq pas 8 ou 16 ou plus ?
         self.rpn_cls_score=layers.conv2d(inputs=l3, num_outputs=len(anchor_scales)*2, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
         self.rpn_bbox_pred=layers.conv2d(inputs=l3, num_outputs=len(anchor_scales)*4, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
 
@@ -63,10 +65,20 @@ class CustomNet(Network):
                                                                                                 tf.float32, tf.float32, tf.float32])
             rois = tf.reshape(rois, [-1, 5], name='rois')
 
+        l2_swapped = tf.transpose(l2, perm=[0, 3, 1, 2])
+        output_shape_tf = tf.constant((7, 7))
+
         if self.state=="TRAIN":
-            rois_pooled = roi_pool_op.roi_pool(l2, rois,7,7,1/16.0,name='pool_5')[0]
+            #rois_pooled = roi_pool_op.roi_pool(l2, rois,7,7,1/16.0,name='pool_5')[0]
+            new_rois, = tf.py_func(adapt_rois, [rois], [tf.int32])
         else:
-            rois_pooled = roi_pool_op.roi_pool(l2, self.rpn_rois,7,7,1/16.0,name='pool_5')[0]
+            #rois_pooled = roi_pool_op.roi_pool(l2, self.rpn_rois,7,7,1/16.0,name='pool_5')[0]
+            # 1. Adapt rois
+            new_rois, = tf.py_func(adapt_rois, [self.rpn_rois], [tf.int32])
+
+        rois_pooled_before, argmax = roi_pooling_op_2(l2_swapped, new_rois, output_shape_tf)
+        rois_pooled_transposed = tf.transpose(rois_pooled_before, perm=[0, 2, 1, 3, 4])
+        rois_pooled = tf.reshape(rois_pooled_transposed, [-1, 64, 7, 7])  # Be careful ! The final depth is 64
         # output : [batch_size, 7, 7, features_depth]
 
         l5 = layers.flatten(rois_pooled)

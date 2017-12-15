@@ -24,7 +24,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     """
-    _anchors = generate_anchors(scales=np.array(anchor_scales))
+    #TODO base_size=4 is important
+    _anchors = generate_anchors(base_size=_feat_stride[0],scales=np.array(anchor_scales)) # Be careful about base_size also...
     _num_anchors = _anchors.shape[0]
 
     if DEBUG:
@@ -145,6 +146,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
 
     # subsample negative labels if we have too many
     num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
+    #print("NUM BG")
     bg_inds = np.where(labels == 0)[0]
     if len(bg_inds) > num_bg:
         disable_inds = npr.choice(
@@ -209,6 +211,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     total_rpn = fg + bg
 
     debug_info=np.array([total_anchors,total_rpn,bg,fg],dtype=np.float32)
+    #print 'DEBUG info: bg and fg',debug_info
     return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights,debug_info
 
 
