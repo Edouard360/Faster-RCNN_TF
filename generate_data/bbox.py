@@ -25,3 +25,7 @@ def coords_bboxs(bboxs,width,height):
         bounds = bbox.bounds
         bboxs_coords+=[[bounds[0]/width,bounds[1]/height,(bounds[0]+bounds[2])/width,(bounds[1]+bounds[3])/height]]
     return bboxs_coords
+
+def filter_bboxs(bboxs,width,heigth):
+    margin = 20
+    return np.where((bboxs[:,0]>=margin)*(bboxs[:,1]>=margin)*(bboxs[:,2]<=width-margin)*(bboxs[:,3]<=heigth-margin))[0]

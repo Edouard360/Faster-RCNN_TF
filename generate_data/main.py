@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bbox import coords_bboxs, xml_bboxs
+from bbox import coords_bboxs, xml_bboxs, filter_bboxs
 from write_xml import write_xml
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../lib')))
@@ -17,16 +17,16 @@ height = 600
 dpi = 192  # Change that according to your computer
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(width / float(dpi), height / float(dpi)), dpi=dpi)
 ax.set_axis_off()  # clears the axis
-n_images = 1
+n_images = 10
 
-n_samples_per_image = 10
+n_samples_per_image = 12
 
 filepath = os.path.dirname(os.path.abspath(__file__)) + '/../data/VOCdevkit2008/VOC2008/'
 
 with open(filepath + "ImageSets/Main/trainval.txt", "a") as myfile:
     for i in range(n_images):
         plt.clf()
-        filename = '{0:03}'.format(i + 12)
+        filename = '{0:03}'.format(i + 10)
         myfile.write('\n' + filename)
 
         symbols_classes = [r'$\longrightarrow$', r'$\sigma$', r'$\alpha$', r'$\gamma$',
@@ -54,10 +54,15 @@ with open(filepath + "ImageSets/Main/trainval.txt", "a") as myfile:
         # plt.show()
 
         bboxs_bounds = xml_bboxs(bboxs, width, height)
+
         dets = bboxs_bounds.copy()
         dets[:, [1, 3]] = dets[:, [3, 1]]
+        valid_indices = filter_bboxs(dets, width, height)
+        dets = dets[valid_indices]
         dets = np.concatenate((dets, np.arange(len(dets), 0, -1).reshape(-1, 1)), axis=1)
-        indices = np.array(py_cpu_nms(dets, 0.15))
+        indices_in_valid = np.array(py_cpu_nms(dets, 0.15))
+
+        indices = valid_indices[indices_in_valid]
         print 'Nb. of kept indices : ', len(indices)
 
         # TODO: unfortunately we rewrite brutally here...
