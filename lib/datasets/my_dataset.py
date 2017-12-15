@@ -30,7 +30,12 @@ class my_dataset(imdb):
                             else devkit_path
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
         self._classes = ('__background__', # always index 0
-                         'sigma', 'Sigma' )#'sigma','alpha') #SIGMA ! CHAMPION DU MONDE
+                         # 'sigma', 'Sigma')
+                         'longrightarrow', 'sigma', 'alpha', 'gamma',
+                         'int')
+                             # )#'sigma','alpha') #SIGMA ! CHAMPION DU MONDE
+
+
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
@@ -104,9 +109,10 @@ class my_dataset(imdb):
 
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+        # with open(cache_file, 'wb') as fid:
+        #     cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # print 'wrote gt roidb to {}'.format(cache_file)
+        print 'DIDNT WRITE ANY CACHE'
 
         return gt_roidb
 
@@ -132,9 +138,10 @@ class my_dataset(imdb):
             roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self._load_selective_search_roidb(None)
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+        # with open(cache_file, 'wb') as fid:
+        #     cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # print 'wrote ss roidb to {}'.format(cache_file)
+        print 'DIDNT WRITE ANY CACHE'
 
         return roidb
 

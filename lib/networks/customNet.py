@@ -11,9 +11,10 @@ from roi_pooling_layer_2.roi_pooling_layer import roi_pooling_op_2
 # layers.conv2d #
 #define
 
-n_classes =  3
+n_classes =  6#3
 _feat_stride = [8,] # _feat_stride  generer trop d'anchor est ultra long
-anchor_scales = [10]#[8, 16, 32] -> car 7 * 16 = 112 ~ 100 => en plus en divisant par 16 ca tombera rond
+anchor_scales = [15]#[8, 16, 32] -> car 7 * 16 = 112 ~ 100 => en plus en divisant par 16 ca tombera rond
+ratios = [0.5,1,2]
 
 class CustomNet(Network):
     def __init__(self, trainable=True,state='TRAIN'):
@@ -44,18 +45,18 @@ class CustomNet(Network):
         l2 = layers.conv2d(inputs=l1_bis, num_outputs=64, kernel_size=[3, 3], stride=[2, 2])
 
         l3=layers.conv2d(inputs=l2, num_outputs=128, kernel_size=[3, 3], stride=[1, 1]) # layer 3 saves our ass 3 pq pas 8 ou 16 ou plus ?
-        self.rpn_cls_score=layers.conv2d(inputs=l3, num_outputs=len(anchor_scales)*2, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
-        self.rpn_bbox_pred=layers.conv2d(inputs=l3, num_outputs=len(anchor_scales)*4, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
+        self.rpn_cls_score=layers.conv2d(inputs=l3, num_outputs=len(ratios)*len(anchor_scales)*2, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
+        self.rpn_bbox_pred=layers.conv2d(inputs=l3, num_outputs=len(ratios)*len(anchor_scales)*4, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
 
         self.rpn_cls_prob = tf.nn.softmax(self.rpn_cls_score)
 
         if self.state=="TRAIN":
-            self.rpn_labels, self.rpn_bbox_targets, self.rpn_bbox_inside_weights, self.rpn_bbox_outside_weights, debug_info = tf.py_func(anchor_target_layer, [self.rpn_cls_score, self.gt_boxes, self.im_info, self.data, _feat_stride, anchor_scales],
+            self.rpn_labels, self.rpn_bbox_targets, self.rpn_bbox_inside_weights, self.rpn_bbox_outside_weights, debug_info = tf.py_func(anchor_target_layer, [self.rpn_cls_score, self.gt_boxes, self.im_info, self.data, _feat_stride, anchor_scales, ratios],
                        [tf.int32, tf.float32, tf.float32, tf.float32, tf.float32])
 
             self.debug_info = debug_info
 
-        self.rpn_rois=tf.reshape(tf.py_func(proposal_layer, [self.rpn_cls_prob, self.rpn_bbox_pred, self.im_info, self.state, _feat_stride, anchor_scales],
+        self.rpn_rois=tf.reshape(tf.py_func(proposal_layer, [self.rpn_cls_prob, self.rpn_bbox_pred, self.im_info, self.state, _feat_stride, anchor_scales, ratios],
                               [tf.float32]), [-1, 5], name='rpn_rois')
 
         if self.state=="TRAIN":

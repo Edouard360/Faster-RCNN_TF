@@ -88,7 +88,7 @@ class SolverWrapper(object):
 
         self.net.compute_loss_and_summaries()
 
-        name='example_name_performance' # should include hyperparameters
+        name='performance' # should include hyperparameters
         train_writer = tf.summary.FileWriter('../tmp/'+name,sess.graph)
 
 

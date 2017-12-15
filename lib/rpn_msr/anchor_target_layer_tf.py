@@ -19,13 +19,13 @@ import matplotlib.pyplot as plt
 DEBUG = False
 from vis_detections import vis_detections
 
-def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [16,], anchor_scales = [4 ,8, 16, 32]):
+def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [16,], anchor_scales = [4 ,8, 16, 32],ratios = [1.0]):
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     """
     #TODO base_size=4 is important
-    _anchors = generate_anchors(base_size=_feat_stride[0],scales=np.array(anchor_scales)) # Be careful about base_size also...
+    _anchors = generate_anchors(base_size=_feat_stride[0],scales=np.array(anchor_scales),ratios=ratios) # Be careful about base_size also...
     _num_anchors = _anchors.shape[0]
 
     if DEBUG:
@@ -211,7 +211,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     total_rpn = fg + bg
 
     debug_info=np.array([total_anchors,total_rpn,bg,fg],dtype=np.float32)
-    #print 'DEBUG info: bg and fg',debug_info
+    print 'DEBUG info: bg and fg',debug_info
     return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights,debug_info
 
 
