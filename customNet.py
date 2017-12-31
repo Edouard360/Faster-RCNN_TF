@@ -2,22 +2,19 @@ import tensorflow as tf
 from rpn_msr.anchor_target_layer_tf import anchor_target_layer
 from rpn_msr.proposal_layer_tf import proposal_layer
 from rpn_msr.proposal_target_layer_tf import proposal_target_layer
-from networks.network import Network
-import roi_pooling_layer.roi_pooling_op as roi_pool_op
+# import roi_pooling_layer.roi_pooling_op as roi_pool_op
 from utils.smooth_l1 import smooth_l1
 from utils.adapt_rois import adapt_rois
 import tensorflow.contrib.layers as layers
 from roi_pooling_layer_2.roi_pooling_layer import roi_pooling_op_2
-# layers.conv2d #
-#define
 
 n_classes =  6#3
 _feat_stride = [8,] # _feat_stride  generer trop d'anchor est ultra long
 anchor_scales = [15]#[8, 16, 32] -> car 7 * 16 = 112 ~ 100 => en plus en divisant par 16 ca tombera rond
 ratios = [0.5,1,2]
 
-class CustomNet(Network):
-    def __init__(self, trainable=True,state='TRAIN'):
+class CustomNet():
+    def __init__(self,state='TRAIN'):
         self.state=state
         self.inputs = []
         self.data = tf.placeholder(tf.float32, shape=[None, None, None, 1])
@@ -25,7 +22,6 @@ class CustomNet(Network):
         self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self.keep_prob = tf.placeholder(tf.float32)
         self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
-        self.trainable = trainable
         self.setup()
 
         # create ops and placeholders for bbox normalization process
@@ -40,13 +36,22 @@ class CustomNet(Network):
             self.bbox_bias_assign = biases.assign(self.bbox_biases)
 
     def setup(self):
-        l1=layers.conv2d(inputs=1-self.data,num_outputs=32,kernel_size=[3,3],stride=[2,2])
-        l1_bis=layers.conv2d(inputs=l1,num_outputs=64,kernel_size=[3,3],stride=[2,2])
-        l2 = layers.conv2d(inputs=l1_bis, num_outputs=64, kernel_size=[3, 3], stride=[2, 2])
+        l1=layers.conv2d(inputs=1-self.data,num_outputs=16,kernel_size=[3,3],stride=[1,1])
+        l1_2 = layers.conv2d(l1, num_outputs=32, kernel_size=[3, 3], stride=[1, 1])
+        l1_pooled = layers.max_pool2d(l1_2,[2,2])
+        l2=layers.conv2d(l1_pooled,num_outputs=32,kernel_size=[3,3],stride=[1,1])
+        l2_2 = layers.conv2d(l2, num_outputs=32, kernel_size=[3,3], stride=[1,1])
+        l2_3 = layers.conv2d(l2_2, num_outputs=64, kernel_size=[3, 3], stride=[1, 1])
+        l2_pooled = layers.max_pool2d(l2_3,[2,2])
+        l3 = layers.conv2d(l2_pooled, num_outputs=64, kernel_size=[3, 3], stride=[1, 1])
+        l3_1 = layers.conv2d(l3, num_outputs=64, kernel_size=[3, 3], stride=[1, 1])
+        l3_2 = layers.conv2d(l3_1, num_outputs=64, kernel_size=[3, 3], stride=[1, 1])
+        l3_pooled = layers.max_pool2d(l3_2, [2, 2])
+        l3_last = layers.conv2d(l3_pooled, num_outputs=64, kernel_size=[3, 3], stride=[1, 1])
+        l4=layers.conv2d(l3_last,num_outputs=128,kernel_size=[3,3],stride=[1,1])
 
-        l3=layers.conv2d(inputs=l2, num_outputs=128, kernel_size=[3, 3], stride=[1, 1]) # layer 3 saves our ass 3 pq pas 8 ou 16 ou plus ?
-        self.rpn_cls_score=layers.conv2d(inputs=l3, num_outputs=len(ratios)*len(anchor_scales)*2, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
-        self.rpn_bbox_pred=layers.conv2d(inputs=l3, num_outputs=len(ratios)*len(anchor_scales)*4, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
+        self.rpn_cls_score=layers.conv2d(inputs=l4, num_outputs=len(ratios)*len(anchor_scales)*2, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
+        self.rpn_bbox_pred=layers.conv2d(inputs=l4, num_outputs=len(ratios)*len(anchor_scales)*4, kernel_size=[1, 1], stride=[1, 1],padding='VALID',activation_fn=None)
 
         self.rpn_cls_prob = tf.nn.softmax(self.rpn_cls_score)
 
@@ -66,7 +71,7 @@ class CustomNet(Network):
                                                                                                 tf.float32, tf.float32, tf.float32])
             rois = tf.reshape(rois, [-1, 5], name='rois')
 
-        l2_swapped = tf.transpose(l2, perm=[0, 3, 1, 2])
+        last_swapped = tf.transpose(l3_last, perm=[0, 3, 1, 2])
         output_shape_tf = tf.constant((7, 7))
 
         if self.state=="TRAIN":
@@ -77,7 +82,7 @@ class CustomNet(Network):
             # 1. Adapt rois
             new_rois, = tf.py_func(adapt_rois, [self.rpn_rois], [tf.int32])
 
-        rois_pooled_before, argmax = roi_pooling_op_2(l2_swapped, new_rois, output_shape_tf)
+        rois_pooled_before, argmax = roi_pooling_op_2(last_swapped, new_rois, output_shape_tf)
         rois_pooled_transposed = tf.transpose(rois_pooled_before, perm=[0, 2, 1, 3, 4])
         rois_pooled = tf.reshape(rois_pooled_transposed, [-1, 64, 7, 7])  # Be careful ! The final depth is 64
         # output : [batch_size, 7, 7, features_depth]

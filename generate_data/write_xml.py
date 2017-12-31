@@ -1,5 +1,8 @@
 from lxml import etree
 
+def symbol_to_text(s):
+    return s.split('\\')[-1].split('$')[0]
+
 def write_xml(symbols, bboxs, width, height, filename='figure1.xml'):
     root = etree.Element('annotation')
 
@@ -25,7 +28,7 @@ def write_xml(symbols, bboxs, width, height, filename='figure1.xml'):
     for s, bbox in zip(symbols, bboxs):
         object_balise = etree.SubElement(root, "object")
         name = etree.SubElement(object_balise, "name")
-        s = s.split('\\')[-1].split('$')[0]
+        s = symbol_to_text(s)
         name.text = s
         pose = etree.SubElement(object_balise, "pose")
         pose.text = "Unspecified"

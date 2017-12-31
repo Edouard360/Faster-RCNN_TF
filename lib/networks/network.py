@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
-import roi_pooling_layer.roi_pooling_op as roi_pool_op
-import roi_pooling_layer.roi_pooling_op_grad
+# import roi_pooling_layer.roi_pooling_op as roi_pool_op
+# import roi_pooling_layer.roi_pooling_op_grad
 from rpn_msr.proposal_layer_tf import proposal_layer as proposal_layer_py
 from rpn_msr.anchor_target_layer_tf import anchor_target_layer as anchor_target_layer_py
 from rpn_msr.proposal_target_layer_tf import proposal_target_layer as proposal_target_layer_py
@@ -150,11 +150,11 @@ class Network(object):
             input[1] = input[1][0]
 
         print input
-        return roi_pool_op.roi_pool(input[0], input[1],
-                                    pooled_height,
-                                    pooled_width,
-                                    spatial_scale,
-                                    name=name)[0]
+        # return roi_pool_op.roi_pool(input[0], input[1],
+        #                             pooled_height,
+        #                             pooled_width,
+        #                             spatial_scale,
+        #                             name=name)[0]
 
     @layer
     def proposal_layer(self, input, _feat_stride, anchor_scales, cfg_key, name):

@@ -1,4 +1,3 @@
-import _init_paths
 import tensorflow as tf
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
@@ -8,11 +7,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os, sys, cv2
 import argparse
-from networks.factory import get_network
+from customNet import CustomNet
 from vis_detections import vis_detections
 
-CLASSES = ('__background__',
-          'sigma', 'Sigma')
+from constants import TEXT_CLASSES
+
+CLASSES = TEXT_CLASSES
 
 def demo(sess, net, image_name):
     """Detect object classes in an image using pre-computed object proposals."""
@@ -34,8 +34,8 @@ def demo(sess, net, image_name):
     fig, ax = plt.subplots(figsize=(12, 12))
     ax.imshow(im[:,:,0], aspect='equal',cmap='gray')
 
-    CONF_THRESH = 0.5
-    NMS_THRESH = 0.3
+    CONF_THRESH = 0.9
+    NMS_THRESH = 0.1
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
@@ -54,8 +54,7 @@ def parse_args():
     parser.add_argument('--cpu', dest='cpu_mode',
                         help='Use CPU mode (overrides --gpu)',
                         action='store_true')
-    parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16]',
-                        default='VGGnet_test')
+
     parser.add_argument('--model', dest='model', help='Model path',
                         default=' ')
 
@@ -73,7 +72,7 @@ if __name__ == '__main__':
     # init session
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # load network
-    net = get_network(args.demo_net, state='TEST')
+    net = CustomNet( state='TEST')
     # load model
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
     saver.restore(sess, args.model)
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     print '\n\nLoaded network {:s}'.format(args.model)
 
 
-    im_names = ['000.jpg','001.jpg','002.jpg','010.jpg'] # Let's see if we can overfit
+    im_names = ['050.jpg','051.jpg','052.jpg']#,'001.jpg','002.jpg','010.jpg'] # Let's see if we can overfit
 
 
     for im_name in im_names:

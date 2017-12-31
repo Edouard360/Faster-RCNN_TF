@@ -9,11 +9,10 @@
 
 """Test a Fast R-CNN network on an image database."""
 
-import _init_paths
 from fast_rcnn.test import test_net
 from fast_rcnn.config import cfg, cfg_from_file
-from datasets.factory import get_imdb
 from networks.factory import get_network
+import datasets.my_dataset
 import argparse
 import pprint
 import time, os, sys
@@ -73,7 +72,7 @@ if __name__ == '__main__':
 
     weights_filename = os.path.splitext(os.path.basename(args.model))[0]
 
-    imdb = get_imdb(args.imdb_name)
+    imdb = datasets.my_dataset()
     imdb.competition_mode(args.comp_mode)
 
     device_name = '/{}:{:d}'.format(args.device,args.device_id)

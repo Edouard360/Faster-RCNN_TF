@@ -13,8 +13,7 @@ from write_xml import write_xml
 from py_cpu_nms import py_cpu_nms
 
 # This is a CONSTANT of all the SYMBOLS. Can be simplified.
-SYMBOLS_CLASSES = [r'$\longrightarrow$', r'$\sigma$', r'$\alpha$', r'$\gamma$',
-                   r'$\int$']
+from constants import SYMBOLS_CLASSES
 
 
 def generate_symbols_and_xml(n_images=1, n_samples_per_image=10, max_overlap=0.15, filepath='', image_folder='',

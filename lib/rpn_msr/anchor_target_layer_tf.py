@@ -211,7 +211,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [
     total_rpn = fg + bg
 
     debug_info=np.array([total_anchors,total_rpn,bg,fg],dtype=np.float32)
-    print 'DEBUG info: bg and fg',debug_info
+    #print 'DEBUG info: bg and fg',debug_info
     return rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights,debug_info
 
 

@@ -9,16 +9,15 @@
 
 """Train a Fast R-CNN network on a region of interest database."""
 
-import _init_paths
-from fast_rcnn.train import get_training_roidb, train_net
-from fast_rcnn.config import cfg,cfg_from_file, cfg_from_list, get_output_dir
-from datasets.factory import get_imdb
-from networks.factory import get_network
 import argparse
 import pprint
-import numpy as np
 import sys
-import pdb
+
+from customNet import CustomNet
+from datasets.my_dataset import my_dataset
+from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+from main_train import get_training_roidb, train_net
+
 
 def parse_args():
     """
@@ -41,15 +40,9 @@ def parse_args():
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default=None, type=str)
-    parser.add_argument('--imdb', dest='imdb_name',
-                        help='dataset to train on',
-                        default='kitti_train', type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
-    parser.add_argument('--network', dest='network_name',
-                        help='name of the network',
-                        default=None, type=str)
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
@@ -75,10 +68,7 @@ if __name__ == '__main__':
     print('Using config:')
     pprint.pprint(cfg)
 
-    if not args.randomize:
-        # fix the random seeds (numpy and caffe) for reproducibility
-        np.random.seed(cfg.RNG_SEED)
-    imdb = get_imdb(args.imdb_name)
+    imdb = my_dataset()
     print 'Loaded dataset `{:s}` for training'.format(imdb.name)
     roidb = get_training_roidb(imdb)
 
@@ -88,8 +78,7 @@ if __name__ == '__main__':
     device_name = '/{}:{:d}'.format(args.device,args.device_id)
     print device_name
 
-    network = get_network(args.network_name)
-    print 'Use network `{:s}` in training'.format(args.network_name)
+    network = CustomNet()#**kargs)
 
     train_net(network, imdb, roidb, output_dir,
               pretrained_model=args.pretrained_model,

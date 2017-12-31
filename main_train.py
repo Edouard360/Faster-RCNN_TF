@@ -84,13 +84,15 @@ class SolverWrapper(object):
 
     def train_model(self, sess, max_iters):
         """Network training loop."""
-        data_layer = get_data_layer(self.roidb, self.imdb.num_classes)
+
+        data_layer = RoIDataLayer(self.roidb, self.imdb.num_classes)
 
         self.net.compute_loss_and_summaries()
 
-        name='performance' # should include hyperparameters
-        train_writer = tf.summary.FileWriter('../tmp/'+name,sess.graph)
-
+        name='much_bigger_receptive' # should include hyperparameters
+        #train_writer = tf.summary.FileWriter('../tmp/'+name,sess.graph)
+        project_root_path = os.path.abspath((os.path.dirname(os.path.abspath(__file__)))+'/../..')
+        train_writer = tf.summary.FileWriter('tmp/' + name, sess.graph)
 
         # iintialize variables
         sess.run(tf.global_variables_initializer())
@@ -138,6 +140,7 @@ class SolverWrapper(object):
                 # print "RPN value classif.",rpn_fg_acc_value
                 # print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f'%\
                 #         (iter+1, max_iters, rpn_loss_cls_value+rpn_loss_box_value,rpn_loss_cls_value,rpn_loss_box_value)
+                print 'Iter : ',iter
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
                 # , loss_cls: %.4f, loss_box: %.4f, lr: %f'%\
@@ -169,17 +172,6 @@ def get_training_roidb(imdb):
 
     return imdb.roidb
 
-def get_data_layer(roidb, num_classes):
-    """return a data layer."""
-    if cfg.TRAIN.HAS_RPN:
-        if cfg.IS_MULTISCALE:
-            pass#layer = GtDataLayer(roidb)
-        else:
-            layer = RoIDataLayer(roidb, num_classes)
-    else:
-        layer = RoIDataLayer(roidb, num_classes)
-
-    return layer
 
 def filter_roidb(roidb):
     """Remove roidb entries that have no usable RoIs."""
