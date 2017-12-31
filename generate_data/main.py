@@ -1,57 +1,41 @@
+import argparse
 import os
-import sys
 
+import matplotlib
+
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bbox import coords_bboxs, xml_bboxs, filter_bboxs
+from bbox import xml_bboxs, filter_bboxs
 from write_xml import write_xml
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../lib')))
+from py_cpu_nms import py_cpu_nms
 
-from nms.py_cpu_nms import py_cpu_nms
+# This is a CONSTANT of all the SYMBOLS. Can be simplified.
+SYMBOLS_CLASSES = [r'$\longrightarrow$', r'$\sigma$', r'$\alpha$', r'$\gamma$',
+                   r'$\int$']
 
-width = 600
-height = 600
 
-dpi = 192  # Change that according to your computer
-fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(width / float(dpi), height / float(dpi)), dpi=dpi)
-ax.set_axis_off()  # clears the axis
-n_images = 10
+def generate_symbols_and_xml(n_images=1, n_samples_per_image=10, max_overlap=0.15, filepath='', image_folder='',
+                             annotation_folder=''):
+    width = 600
+    height = 600
+    dpi = 192  # Change that according to your computer
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(width / float(dpi), height / float(dpi)), dpi=dpi)
+    ax.set_axis_off()  # clears the axis
 
-n_samples_per_image = 12
-
-filepath = os.path.dirname(os.path.abspath(__file__)) + '/../data/VOCdevkit2008/VOC2008/'
-
-with open(filepath + "ImageSets/Main/trainval.txt", "a") as myfile:
     for i in range(n_images):
         plt.clf()
-        filename = '{0:03}'.format(i + 10)
-        myfile.write('\n' + filename)
+        filename = '{0:03}'.format(i)
 
-        symbols_classes = [r'$\longrightarrow$', r'$\sigma$', r'$\alpha$', r'$\gamma$',
-                           r'$\int$']  # r'$\int$' ,]#['$\Sigma$','$\sigma$']#,,'A','B','a','b']
         position = np.random.uniform(low=0.15, high=0.65, size=(n_samples_per_image, 2))
-        # x = np.linspace(0.3, 0.6, 2)
-        # y = np.linspace(0.3, 0.6, 2)
-        # xv, yv = np.meshgrid(x, y, sparse=False, indexing='xy')
-        # k=0
-        # for x_i in range(2):
-        #     for y_j in range(2):
-        #         position[k] = [xv[x_i,y_j], yv[x_i,y_j]]
-        #         k+=1
+
         taille = 60 + np.random.normal(0, 5, size=n_samples_per_image)
-        symbols = np.random.choice(symbols_classes, size=n_samples_per_image)
+        symbols = np.random.choice(SYMBOLS_CLASSES, size=n_samples_per_image)
         texts = [fig.text(x, y, symbol, size=s) for (x, y), s, symbol in zip(position, taille, symbols)]
-        fig.savefig(filepath + 'JPEGImages/' + filename + '.jpg', dpi=dpi)
+        fig.savefig(filepath + image_folder + filename + '.jpg', dpi=dpi)
         bboxs = [text.get_window_extent() for text in texts]
-
-        bboxs_coords = coords_bboxs(bboxs, width, height)
-
-        # [plot_bbox(ax,bbox_coord) for bbox_coord in bboxs_coords]
-        # plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
-        # fig.savefig('symbol_with_bbox.jpg', dpi = dpi)
-        # plt.show()
 
         bboxs_bounds = xml_bboxs(bboxs, width, height)
 
@@ -60,16 +44,58 @@ with open(filepath + "ImageSets/Main/trainval.txt", "a") as myfile:
         valid_indices = filter_bboxs(dets, width, height)
         dets = dets[valid_indices]
         dets = np.concatenate((dets, np.arange(len(dets), 0, -1).reshape(-1, 1)), axis=1)
-        indices_in_valid = np.array(py_cpu_nms(dets, 0.15))
+        indices_in_valid = np.array(py_cpu_nms(dets, max_overlap))
 
         indices = valid_indices[indices_in_valid]
-        print 'Nb. of kept indices : ', len(indices)
+        print 'Nb. of kept indices : %d/%d' % (len(indices), n_samples_per_image)
 
-        # TODO: unfortunately we rewrite brutally here...
+        # Once we have decided which indices to keep, we clear the plot
+        # And overwrite, to plot only the non-overlapping symbols
         plt.clf()
-        texts = [fig.text(x, y, symbol, size=s) for (x, y), s, symbol in
-                 zip(position[indices], taille[indices], symbols[indices])]
-        fig.savefig(filepath + 'JPEGImages/' + filename + '.jpg', dpi=dpi)
+        for (x, y), s, symbol in zip(position[indices], taille[indices], symbols[indices]):
+            fig.text(x, y, symbol, size=s)
+        fig.savefig(filepath + image_folder + filename + '.jpg', dpi=dpi)
 
-        write_xml(symbols[indices], bboxs_bounds[indices], width, height,
-                  filename=filepath + 'Annotations/' + filename + '.xml')
+        if annotation_folder is not None:
+            write_xml(symbols[indices], bboxs_bounds[indices], width, height,
+                      filename=filepath + annotation_folder + filename + '.xml')
+
+
+def generate_symbols_only(**kargs):
+    generate_symbols_and_xml(annotation_folder=None, **kargs)
+
+
+def generate_symbols_and_xml_to_voc2008(**kargs):
+    generate_symbols_and_xml(filepath=os.path.dirname(os.path.abspath(__file__)) + '/../data/VOCdevkit2008/VOC2008/',
+                             image_folder='JPEGImages/',
+                             annotation_folder='Annotations/',
+                             **kargs)
+
+
+def parse_args():
+    """
+    Parse input arguments
+    """
+    parser = argparse.ArgumentParser(description='Generate Images')
+
+    parser.add_argument('--n_images', help='number of images to generate',
+                        default=1, type=int)
+    parser.add_argument('--n_samples_per_image', help='max number of symbols we will plot in am image',
+                        default=10, type=int)
+    parser.add_argument('--max_overlap', help='max_overlap allowed between images',
+                        default=0.15, type=float)
+    parser.add_argument('--annotation_folder', help='where annotations should go',
+                        default='', type=str)
+    parser.add_argument('--image_folder', help='where images should go',
+                        default='', type=str)
+    parser.add_argument('--filepath', help='you can indicate a common filepath '
+                                           'to image_folder and annotation_folder (prefix) ',
+                        default='', type=str)
+
+    args = parser.parse_args()
+    return args
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    generate_symbols_and_xml(**vars(args))

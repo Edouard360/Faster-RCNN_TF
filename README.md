@@ -7,24 +7,38 @@ Fork of this [repo](https://github.com/smallcorgi/Faster-RCNN_TF).
 This is an experimental Tensorflow implementation of Faster RCNN - a convnet for object detection with a region proposal network.
 For details about R-CNN please refer to the paper [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](http://arxiv.org/pdf/1506.01497v3.pdf) by Shaoqing Ren, Kaiming He, Ross Girshick, Jian Sun.
 
-### Requirements: software
+### Generate data
 
-1. Requirements for Tensorflow (see: [Tensorflow](https://www.tensorflow.org/))
+You can either generate data from the command line or in a python script using the functions in `generate_data/` folder.
 
-2. Python packages you might not have: `cython`, `python-opencv`, `easydict`
+#### Using the command line
 
-### Installation (sufficient for the demo)
+The following will generate one image and its corresponding xml in the `generate_data/` folder
 
-1. Clone the Faster R-CNN repository
+```
+cd generate_data/
+python main.py
+```
 
-2. Build the Cython modules
-    ```Shell
-    cd Faster-RCNN_TF/lib/
-    make
-    ```
+Also check out  
 
+```
+python main.py --help
+```
 
+To see available options for tuning:
 
+- Number of images to generate
+- Number of symbols per images
+- Path where to put the .xml
+- Path where to put the .jpeg
+- Maximum overlap btw images
+
+For instance the following command would generate 10 images with at most 5 symbols per image and put both at the project root
+
+```
+python main.py --n_images 10 --n_samples_per_image 5 --filepath '../' 
+```
 
 ### References
 [Faster R-CNN caffe version](https://github.com/rbgirshick/py-faster-rcnn)
