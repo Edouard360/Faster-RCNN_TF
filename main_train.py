@@ -7,9 +7,9 @@
 
 """Train a Fast R-CNN network."""
 
-from fast_rcnn.config import cfg
+from config import cfg
 #import gt_data_layer.roidb as gdl_roidb
-import roi_data_layer.roidb as rdl_roidb
+
 #from gt_data_layer.layer import GtDataLayer
 from roi_data_layer.layer import RoIDataLayer
 from utils.timer import Timer
@@ -21,23 +21,24 @@ from tensorflow.python.client import timeline
 import time
 import matplotlib.pyplot as plt
 
+from roi_data_layer.roidb import add_bbox_regression_targets
+
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
     This wrapper gives us control over he snapshotting process, which we
     use to unnormalize the learned bounding-box regression weights.
     """
 
-    def __init__(self, sess, saver, network, imdb, roidb, output_dir, pretrained_model=None):
+    def __init__(self, sess, saver, network, imdb, roidb, pretrained_model=None):
         """Initialize the SolverWrapper."""
         self.net = network
         self.imdb = imdb
         self.roidb = roidb
-        self.output_dir = output_dir
         self.pretrained_model = pretrained_model
 
         print 'Computing bounding-box regression targets...'
         if cfg.TRAIN.BBOX_REG:
-            self.bbox_means, self.bbox_stds = rdl_roidb.add_bbox_regression_targets(roidb) #TODO
+            self.bbox_means, self.bbox_stds = add_bbox_regression_targets(roidb) #TODO
         print 'done'
 
         # For checkpoint
@@ -63,17 +64,8 @@ class SolverWrapper(object):
             sess.run(net.bbox_weights_assign, feed_dict={net.bbox_weights: orig_0 * np.tile(self.bbox_stds, (weights_shape[0], 1))})
             sess.run(net.bbox_bias_assign, feed_dict={net.bbox_biases: orig_1 * self.bbox_stds + self.bbox_means})
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-
-        infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
-                 if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
-        filename = (cfg.TRAIN.SNAPSHOT_PREFIX + infix +
-                    '_iter_{:d}'.format(iter+1) + '.ckpt')
-        filename = os.path.join(self.output_dir, filename)
-
-        self.saver.save(sess, filename)
-        print 'Wrote snapshot to: {:s}'.format(filename)
+        self.saver.save(sess, 'models/weights/iter_{:d}'.format(iter+1))
+        print 'Wrote snapshot'
 
         if cfg.TRAIN.BBOX_REG: #and net.layers.has_key('bbox_pred'):
             print "yes"
@@ -89,12 +81,8 @@ class SolverWrapper(object):
 
         self.net.compute_loss_and_summaries()
 
-        name='much_bigger_receptive' # should include hyperparameters
-        #train_writer = tf.summary.FileWriter('../tmp/'+name,sess.graph)
-        project_root_path = os.path.abspath((os.path.dirname(os.path.abspath(__file__)))+'/../..')
-        train_writer = tf.summary.FileWriter('tmp/' + name, sess.graph)
+        train_writer = tf.summary.FileWriter('models/performance/1', sess.graph)
 
-        # iintialize variables
         sess.run(tf.global_variables_initializer())
         if self.pretrained_model is not None:
             print ('Loading pretrained model '
@@ -108,43 +96,19 @@ class SolverWrapper(object):
 
             feed_dict={self.net.data: blobs['data'], self.net.im_info: blobs['im_info'], self.net.keep_prob: 0.5, \
                            self.net.gt_boxes: blobs['gt_boxes']}
-            #print(blobs['data'].mean())
-
             timer.tic()
 
-
-            # loss_cls_value, loss_box_value --- cross_entropy, loss_box,
-            debug_info, summary, _ = sess.run([self.net.debug_info,self.net.merge, self.net.train_op], #cross_entropy, loss_box,
+            debug_info, summary, _ = sess.run([self.net.debug_info,self.net.merge, self.net.train_op],
                                                                                                 feed_dict=feed_dict)
 
             train_writer.add_summary(summary, iter) #TODO : uncomment when clean
 
-            #print("Verify shape",rpn_cls_score_value.shape)
-
-            # Classification repartition
-
-            # if prev is not None and prev.shape==rpn_cls_score_value.shape:
-            #     print (rpn_cls_score_value==prev).mean()
-            #prev = rpn_cls_score_value
-
-            # cls_score = [(rpn_cls_score_value[0, :, :, 2 * k] >= rpn_cls_score_value[0, :, :, 2 * k + 1]) for k in range(9)]
-            # cls_or_not_score = [(rpn_cls_score_value[0, :, :, 2 * k] >= rpn_cls_score_value[0, :, :, 2 * k + 1]).mean() for k in range(9)]
-            # ax.clear()
-            # ax.imshow(cls_score[5] + 0, aspect='equal')
-
             timer.toc()
             #print 'Debug info:\ntotal_anchors %.0f\ntotal_rpn %.0f\nbg %.0f\nfg %.0f'%tuple(debug_info)
             if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
-                # print("Mean classification :",
-                #       (rpn_cls_score_value[:, 0] <= rpn_cls_score_value[:, 1]).mean())  # Proportion of the foreground
-                # print "RPN value classif.",rpn_fg_acc_value
-                # print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f'%\
-                #         (iter+1, max_iters, rpn_loss_cls_value+rpn_loss_box_value,rpn_loss_cls_value,rpn_loss_box_value)
                 print 'Iter : ',iter
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
-                # , loss_cls: %.4f, loss_box: %.4f, lr: %f'%\
-                # + rpn_loss_box_value + loss_cls_value + loss_box_value ,rpn_loss_cls_value, ,loss_cls_value, loss_box_value, lr.eval()
 
             if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
@@ -152,25 +116,6 @@ class SolverWrapper(object):
 
         if last_snapshot_iter != iter:
             self.snapshot(sess, iter)
-
-def get_training_roidb(imdb):
-    """Returns a roidb (Region of Interest database) for use in training."""
-    # if cfg.TRAIN.USE_FLIPPED:
-    #     print 'Appending horizontally-flipped training examples...'
-    #     imdb.append_flipped_images()
-    #     print 'done'
-
-    print 'Preparing training data...'
-    if cfg.TRAIN.HAS_RPN:
-        if cfg.IS_MULTISCALE:
-            pass#gdl_roidb.prepare_roidb(imdb)
-        else:
-            rdl_roidb.prepare_roidb(imdb)
-    else:
-        rdl_roidb.prepare_roidb(imdb)
-    print 'done'
-
-    return imdb.roidb
 
 
 def filter_roidb(roidb):
@@ -198,12 +143,12 @@ def filter_roidb(roidb):
     return filtered_roidb
 
 
-def train_net(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000):
+def train_net(network, imdb, roidb, pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
     roidb = filter_roidb(roidb)
     saver = tf.train.Saver(max_to_keep=100)
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-        sw = SolverWrapper(sess, saver, network, imdb, roidb, output_dir, pretrained_model=pretrained_model)
+        sw = SolverWrapper(sess, saver, network, imdb, roidb, pretrained_model=pretrained_model)
         print 'Solving...'
         sw.train_model(sess, max_iters)
         print 'done solving'

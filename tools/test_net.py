@@ -10,7 +10,6 @@
 """Test a Fast R-CNN network on an image database."""
 
 from fast_rcnn.test import test_net
-from fast_rcnn.config import cfg, cfg_from_file
 from networks.factory import get_network
 import datasets.my_dataset
 import argparse
@@ -33,8 +32,6 @@ def parse_args():
     parser.add_argument('--weights', dest='model',
                         help='model to test',
                         default=None, type=str)
-    parser.add_argument('--cfg', dest='cfg_file',
-                        help='optional config file', default=None, type=str)
     parser.add_argument('--wait', dest='wait',
                         help='wait until net file exists',
                         default=True, type=bool)
@@ -60,8 +57,6 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
 
     print('Using config:')
     pprint.pprint(cfg)

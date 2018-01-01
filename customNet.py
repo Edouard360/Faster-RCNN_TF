@@ -102,15 +102,21 @@ class CustomNet():
             with tf.name_scope('cls'):
                 # self.net.get_output('rpn_cls_score_reshape')
                 rpn_cls_score = tf.reshape(self.rpn_cls_score, [-1, 2])
-
                 # tf.logical_and(tf.not_equal(rpn_label,-1),tf.not_equal(rpn_label,0))
-                rpn_cls_score_selected = tf.reshape(tf.gather(rpn_cls_score, tf.where(tf.not_equal(self.rpn_labels, -1))),
-                                                    [-1, 2])
-                rpn_labels_selected = tf.reshape(tf.gather(self.rpn_labels, tf.where(tf.not_equal(self.rpn_labels, -1))), [-1])
-                # tf.summary.histogram('cls_score',rpn_cls_score_selected)
-                rpn_fg_acc = tf.reduce_mean(
+
+                #rpn_cls_score_selected = tf.reshape(tf.gather(rpn_cls_score, tf.where(tf.not_equal(self.rpn_labels, -1))),[-1, 2])
+                rpn_cls_score_selected = tf.reshape(tf.dynamic_partition(rpn_cls_score,tf.cast(tf.not_equal(self.rpn_labels, -1),tf.int32),2)[1],[-1, 2])
+
+                #rpn_labels_selected = tf.reshape(tf.gather(self.rpn_labels, tf.where(tf.not_equal(self.rpn_labels, -1))), [-1])
+                rpn_labels_selected = tf.reshape(
+                    tf.dynamic_partition(self.rpn_labels, tf.cast(tf.not_equal(self.rpn_labels, -1), tf.int32), 2)[1], [-1])
+
+                #  tf.summary.histogram('cls_score',rpn_cls_score_selected)
+
+                rpn_fg_acc = tf.reduce_mean( #rpn_cls_score_selected[:, 0]
                     tf.cast(tf.equal(tf.greater_equal(rpn_cls_score_selected[:, 0], 0.5), tf.equal(rpn_labels_selected, 0)),
                             tf.float32))
+
                 tf.summary.scalar('fg_acc', rpn_fg_acc)
                 rpn_cross_entropy = tf.reduce_mean(
                     tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score_selected, labels=rpn_labels_selected))
@@ -120,7 +126,7 @@ class CustomNet():
                                           self.rpn_bbox_outside_weights)
                 rpn_loss_box = tf.reduce_mean(tf.reduce_sum(rpn_smooth_l1, reduction_indices=[1, 2, 3]))
                 tf.summary.scalar('loss', rpn_loss_box)
-            rpn_loss = rpn_cross_entropy + rpn_loss_box
+            rpn_loss = rpn_loss_box + rpn_cross_entropy
             tf.summary.scalar('loss', rpn_loss)
 
         # R-CNN

@@ -10,7 +10,7 @@ from datasets.imdb import imdb
 import xml.etree.ElementTree as ET
 import numpy as np
 import scipy.sparse
-from constants import TEXT_CLASSES
+from config import TEXT_CLASSES
 
 class my_dataset(imdb):
     def __init__(self):
@@ -19,13 +19,13 @@ class my_dataset(imdb):
 
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
 
-        with open('../data/ImageSets/trainval.txt') as f:
+        with open('data/ImageSets/trainval.txt') as f:
             image_index = [x.strip() for x in f.readlines()]
         self._image_index = image_index
         self._roidb_handler = self.gt_roidb
 
     def image_path_at(self, i):
-        return '../data/JPEGImages/'+self._image_index[i]+'.jpg'
+        return 'data/JPEGImages/'+self._image_index[i]+'.jpg'
 
     def gt_roidb(self):
         gt_roidb = [self._load_pascal_annotation(index)
@@ -44,7 +44,7 @@ class my_dataset(imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = '../data/Annotations/'+index+ '.xml'
+        filename = 'data/Annotations/'+index+ '.xml'
         tree = ET.parse(filename)
         objs = tree.findall('object')
         num_objs = len(objs)

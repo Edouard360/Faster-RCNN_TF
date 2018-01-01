@@ -1,4 +1,4 @@
-from fast_rcnn.config import cfg, get_output_dir
+from config import cfg
 import argparse
 from utils.timer import Timer
 import numpy as np
@@ -282,7 +282,6 @@ def test_net(sess, net, imdb, weights_filename , max_per_image=300, thresh=0.05,
     all_boxes = [[[] for _ in xrange(num_images)]
                  for _ in xrange(imdb.num_classes)]
 
-    output_dir = get_output_dir(imdb, weights_filename)
     # timers
     _t = {'im_detect' : Timer(), 'misc' : Timer()}
 
@@ -341,10 +340,10 @@ def test_net(sess, net, imdb, weights_filename , max_per_image=300, thresh=0.05,
               .format(i + 1, num_images, _t['im_detect'].average_time,
                       _t['misc'].average_time)
 
-    det_file = os.path.join(output_dir, 'detections.pkl')
+    det_file = 'detections.pkl'
     with open(det_file, 'wb') as f:
         cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
 
     print 'Evaluating detections'
-    imdb.evaluate_detections(all_boxes, output_dir)
+    imdb.evaluate_detections(all_boxes, '')
 

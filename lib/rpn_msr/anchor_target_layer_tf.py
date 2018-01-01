@@ -7,7 +7,7 @@
 
 import os
 import yaml
-from fast_rcnn.config import cfg
+from config import cfg
 import numpy as np
 import numpy.random as npr
 from generate_anchors import generate_anchors
@@ -17,7 +17,6 @@ import pdb
 
 import matplotlib.pyplot as plt
 DEBUG = False
-from vis_detections import vis_detections
 
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, data, _feat_stride = [16,], anchor_scales = [4 ,8, 16, 32],ratios = [1.0]):
     """

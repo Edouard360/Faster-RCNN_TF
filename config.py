@@ -1,27 +1,18 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Fast R-CNN config system.
-
-This file specifies default config options for Fast R-CNN. You should not
-change values in this file. Instead, you should write a config file (in yaml)
-and use cfg_from_file(yaml_file) to load it and override the default options.
-
-Most tools in $ROOT/tools take a --cfg option to specify an override file.
-    - See tools/{train,test}_net.py for example code that uses cfg_from_file()
-    - See experiments/cfgs/*.yml for example YAML config override files
-"""
-
-import os
 import os.path as osp
 import numpy as np
-from distutils import spawn
+
 # `pip install easydict` if you don't have it
 from easydict import EasyDict as edict
+
+from generate_data.write_xml import symbol_to_text
+
+SYMBOLS_CLASSES = [r'$\longrightarrow$', r'$\sigma$', r'$\alpha$', r'$\gamma$',
+                   r'$\int$']
+
+TEXT_CLASSES = ('__background__',) + tuple([symbol_to_text(s) for s in SYMBOLS_CLASSES])
+
+
+
 
 __C = edict()
 # Consumers can get config by:
@@ -39,7 +30,7 @@ __C.TRAIN.LEARNING_RATE = 0.001
 __C.TRAIN.MOMENTUM = 0.9
 __C.TRAIN.GAMMA = 0.1
 __C.TRAIN.STEPSIZE = 50000
-__C.TRAIN.DISPLAY = 10
+__C.TRAIN.DISPLAY = 1 # WAS 10
 __C.IS_MULTISCALE = False
 
 # Scales to compute real features
@@ -63,7 +54,7 @@ __C.TRAIN.SCALES = (600,)
 __C.TRAIN.MAX_SIZE = 1000
 
 # Images to use per minibatch
-__C.TRAIN.IMS_PER_BATCH = 2
+__C.TRAIN.IMS_PER_BATCH = 1 # No choice here due to implementation
 
 # Minibatch size (number of regions of interest [ROIs])
 __C.TRAIN.BATCH_SIZE = 128
@@ -80,7 +71,7 @@ __C.TRAIN.BG_THRESH_HI = 0.5
 __C.TRAIN.BG_THRESH_LO = 0.1
 
 # Use horizontally-flipped images during training?
-__C.TRAIN.USE_FLIPPED = True
+__C.TRAIN.USE_FLIPPED = False # Was true
 
 # Train bounding-box regressors
 __C.TRAIN.BBOX_REG = True
@@ -90,12 +81,7 @@ __C.TRAIN.BBOX_REG = True
 __C.TRAIN.BBOX_THRESH = 0.5
 
 # Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 5000
-
-# solver.prototxt specifies the snapshot path prefix, this adds an optional
-# infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel
-__C.TRAIN.SNAPSHOT_PREFIX = 'VGGnet_fast_rcnn'
-__C.TRAIN.SNAPSHOT_INFIX = ''
+__C.TRAIN.SNAPSHOT_ITERS = 1000 # Was 5000
 
 # Use a prefetch thread in roi_data_layer.layer
 # So far I haven't found this useful; likely more engineering work is required
@@ -107,12 +93,12 @@ __C.TRAIN.BBOX_NORMALIZE_TARGETS = True
 __C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 # Normalize the targets using "precomputed" (or made up) means and stdevs
 # (BBOX_NORMALIZE_TARGETS must also be True)
-__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = False
+__C.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True# Changed I don't know why ... False
 __C.TRAIN.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0) #TODO:otherwise use this
 __C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 
 # Train using these proposals
-__C.TRAIN.PROPOSAL_METHOD = 'selective_search'
+__C.TRAIN.PROPOSAL_METHOD = 'gt' # WAS SELECTIVE SEARCH
 
 # Make minibatches from images that have similar aspect ratios (i.e. both
 # tall and thin or both short and wide) in order to avoid wasting computation
@@ -120,7 +106,7 @@ __C.TRAIN.PROPOSAL_METHOD = 'selective_search'
 __C.TRAIN.ASPECT_GROUPING = True
 
 # Use RPN to detect objects
-__C.TRAIN.HAS_RPN = False
+__C.TRAIN.HAS_RPN = True # Was False
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 # IOU < thresh: negative example
@@ -130,9 +116,9 @@ __C.TRAIN.RPN_CLOBBER_POSITIVES = False
 # Max number of foreground examples
 __C.TRAIN.RPN_FG_FRACTION = 0.5
 # Total number of examples
-__C.TRAIN.RPN_BATCHSIZE = 256
+__C.TRAIN.RPN_BATCHSIZE = 128 #256 - smaller since we have one image per batch
 # NMS threshold used on RPN proposals
-__C.TRAIN.RPN_NMS_THRESH = 0.7
+__C.TRAIN.RPN_NMS_THRESH = 0.9 # Was 0.7 Put that as high as possible - we only have one image per sample...
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
 __C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
@@ -231,88 +217,7 @@ __C.MATLAB = 'matlab'
 __C.EXP_DIR = 'default'
 
 
-if spawn.find_executable("nvcc"):
-    # Use GPU implementation of non-maximum suppression
-    __C.USE_GPU_NMS = True
-
-    # Default GPU device id
-    __C.GPU_ID = 0
-else:
-    __C.USE_GPU_NMS = False
+__C.USE_GPU_NMS = False
 
 
-def get_output_dir(imdb, weights_filename):
-    """Return the directory where experimental artifacts are placed.
-    If the directory does not exist, it is created.
 
-    A canonical path is built using the name from an imdb and a network
-    (if not None).
-    """
-    outdir = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name))
-    if weights_filename is not None:
-        outdir = osp.join(outdir, weights_filename)
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    return outdir
-
-def _merge_a_into_b(a, b):
-    """Merge config dictionary a into config dictionary b, clobbering the
-    options in b whenever they are also specified in a.
-    """
-    if type(a) is not edict:
-        return
-
-    for k, v in a.iteritems():
-        # a must specify keys that are in b
-        if not b.has_key(k):
-            raise KeyError('{} is not a valid config key'.format(k))
-
-        # the types must match, too
-        old_type = type(b[k])
-        if old_type is not type(v):
-            if isinstance(b[k], np.ndarray):
-                v = np.array(v, dtype=b[k].dtype)
-            else:
-                raise ValueError(('Type mismatch ({} vs. {}) '
-                                'for config key: {}').format(type(b[k]),
-                                                            type(v), k))
-
-        # recursively merge dicts
-        if type(v) is edict:
-            try:
-                _merge_a_into_b(a[k], b[k])
-            except:
-                print('Error under config key: {}'.format(k))
-                raise
-        else:
-            b[k] = v
-
-def cfg_from_file(filename):
-    """Load a config file and merge it into the default options."""
-    import yaml
-    with open(filename, 'r') as f:
-        yaml_cfg = edict(yaml.load(f))
-
-    _merge_a_into_b(yaml_cfg, __C)
-
-def cfg_from_list(cfg_list):
-    """Set config keys via list (e.g., from command line)."""
-    from ast import literal_eval
-    assert len(cfg_list) % 2 == 0
-    for k, v in zip(cfg_list[0::2], cfg_list[1::2]):
-        key_list = k.split('.')
-        d = __C
-        for subkey in key_list[:-1]:
-            assert d.has_key(subkey)
-            d = d[subkey]
-        subkey = key_list[-1]
-        assert d.has_key(subkey)
-        try:
-            value = literal_eval(v)
-        except:
-            # handle the case when v is a string literal
-            value = v
-        assert type(value) == type(d[subkey]), \
-            'type {} does not match original type {}'.format(
-            type(value), type(d[subkey]))
-        d[subkey] = value
